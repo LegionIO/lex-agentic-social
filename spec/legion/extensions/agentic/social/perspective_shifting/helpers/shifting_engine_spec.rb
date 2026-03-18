@@ -35,6 +35,17 @@ RSpec.describe Legion::Extensions::Agentic::Social::PerspectiveShifting::Helpers
       result = engine.add_perspective(name: 'overflow', type: :stakeholder)
       expect(result[:error]).to eq(:too_many_perspectives)
     end
+
+    it 'rejects invalid priorities' do
+      result = engine.add_perspective(name: 'x', type: :stakeholder, priorities: %i[telepathy])
+      expect(result[:error]).to eq(:invalid_priorities)
+    end
+
+    it 'accepts all valid PRIORITY_TYPES' do
+      constants = Legion::Extensions::Agentic::Social::PerspectiveShifting::Helpers::Constants
+      result = engine.add_perspective(name: 'all', type: :stakeholder, priorities: constants::PRIORITY_TYPES.dup)
+      expect(result).to be_a(Legion::Extensions::Agentic::Social::PerspectiveShifting::Helpers::Perspective)
+    end
   end
 
   describe '#add_situation' do

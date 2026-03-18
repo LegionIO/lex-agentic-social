@@ -21,6 +21,10 @@ module Legion
                 return { error: :too_many_perspectives } if @perspectives.size >= Constants::MAX_PERSPECTIVES
                 return { error: :invalid_type } unless Constants::PERSPECTIVE_TYPES.include?(type)
 
+                sym_priorities = Array(priorities).map(&:to_sym)
+                invalid = sym_priorities - Constants::PRIORITY_TYPES
+                return { error: :invalid_priorities, invalid: invalid } unless invalid.empty?
+
                 p = Perspective.new(
                   name:              name,
                   perspective_type:  type,

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-03-18
+
+### Changed
+- Enforce PRIORITY_TYPES validation in ShiftingEngine#add_perspective (returns error hash for invalid priorities)
+
 ## [0.1.0] - 2026-03-18
 
 ### Added
