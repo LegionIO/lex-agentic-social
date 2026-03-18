@@ -1,0 +1,27 @@
+# frozen_string_literal: true
+
+require 'legion/extensions/agentic/social/consent/helpers/tiers'
+require 'legion/extensions/agentic/social/consent/helpers/consent_map'
+require 'legion/extensions/agentic/social/consent/runners/consent'
+
+module Legion
+  module Extensions
+    module Agentic
+      module Social
+        module Consent
+          class Client
+            include Runners::Consent
+
+            def initialize(**)
+              @consent_map = Helpers::ConsentMap.new
+            end
+
+            private
+
+            attr_reader :consent_map
+          end
+        end
+      end
+    end
+  end
+end
