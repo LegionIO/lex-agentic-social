@@ -32,10 +32,14 @@ Domain consolidation gem for social cognition, governance, and multi-agent inter
 
 ## Actors
 
-- `Social::Trust::Actors::Decay` — runs every 300s, decays all trust scores
 - `Social::Conflict::Actors::StaleCheck` — runs every 3600s, checks for stale conflicts
 - `Social::Consent::Actors::TierEvaluation` — runs every 3600s, evaluates and applies consent tiers
+- `Social::Governance::Actors::ShadowAiScan` — interval actor, scans for shadow AI activity
 - `Social::Governance::Actors::VoteTimeout` — runs every 300s, times out expired proposals
+- `Social::JointAttention::Actors::Decay` — interval actor, decays joint attention focus
+- `Social::Mentalizing::Actors::Decay` — interval actor, decays mentalizing model confidence
+- `Social::MirrorSystem::Actors::Decay` — interval actor, decays mirror system activation
+- `Social::Trust::Actors::Decay` — runs every 300s, decays all trust scores
 
 ## Installation
 
