@@ -25,7 +25,7 @@ module Legion
                       else
                         "[symbiosis] bond skipped: #{result[:reason]}"
                       end
-                Legion::Logging.debug msg if defined?(Legion::Logging)
+                log.debug msg
                 { success: result[:created], **result }
               rescue ArgumentError => e
                 { success: false, error: e.message }
@@ -39,7 +39,7 @@ module Legion
                   amount:      amount.clamp(0.0, 1.0)
                 )
                 found = result.fetch(:found, false)
-                Legion::Logging.debug "[symbiosis] activate #{subsystem_a}<->#{subsystem_b} found=#{found}" if defined?(Legion::Logging)
+                log.debug "[symbiosis] activate #{subsystem_a}<->#{subsystem_b} found=#{found}"
                 { success: found, **result }
               rescue ArgumentError => e
                 { success: false, error: e.message }
@@ -48,7 +48,7 @@ module Legion
               def health_status(engine: nil, **)
                 eng = engine || default_engine
                 health = eng.measure_ecosystem_health
-                Legion::Logging.debug "[symbiosis] health score=#{health[:score]} label=#{health[:label]}" if defined?(Legion::Logging)
+                log.debug "[symbiosis] health score=#{health[:score]} label=#{health[:label]}"
                 { success: true, **health }
               rescue ArgumentError => e
                 { success: false, error: e.message }
@@ -63,7 +63,7 @@ module Legion
                         end
 
                 bonds = bonds.select { |b| b[:relationship_type] == relationship_type.to_sym } if relationship_type
-                Legion::Logging.debug "[symbiosis] list_bonds count=#{bonds.size}" if defined?(Legion::Logging)
+                log.debug "[symbiosis] list_bonds count=#{bonds.size}"
                 { success: true, bonds: bonds, count: bonds.size }
               rescue ArgumentError => e
                 { success: false, error: e.message }
@@ -72,7 +72,7 @@ module Legion
               def detect_parasites(strength_threshold: 0.0, engine: nil, **)
                 eng = engine || default_engine
                 parasites = eng.detect_parasites(strength_threshold: strength_threshold.clamp(0.0, 1.0))
-                Legion::Logging.debug "[symbiosis] detect_parasites count=#{parasites.size}" if defined?(Legion::Logging)
+                log.debug "[symbiosis] detect_parasites count=#{parasites.size}"
                 { success: true, parasites: parasites, count: parasites.size }
               rescue ArgumentError => e
                 { success: false, error: e.message }
@@ -81,7 +81,7 @@ module Legion
               def ecosystem_report(engine: nil, **)
                 eng = engine || default_engine
                 report = eng.ecosystem_report
-                Legion::Logging.debug "[symbiosis] ecosystem_report health=#{report.dig(:health, :label)}" if defined?(Legion::Logging)
+                log.debug "[symbiosis] ecosystem_report health=#{report.dig(:health, :label)}"
                 { success: true, **report }
               rescue ArgumentError => e
                 { success: false, error: e.message }

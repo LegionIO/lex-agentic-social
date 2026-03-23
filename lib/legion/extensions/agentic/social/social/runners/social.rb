@@ -13,8 +13,8 @@ module Legion
               def update_social(tick_results: {}, **)
                 extract_social_signals(tick_results)
 
-                Legion::Logging.debug "[social] groups=#{social_graph.group_count} " \
-                                      "agents=#{social_graph.agents_tracked} standing=#{social_graph.social_standing}"
+                log.debug "[social] groups=#{social_graph.group_count} " \
+                          "agents=#{social_graph.agents_tracked} standing=#{social_graph.social_standing}"
 
                 {
                   groups:         social_graph.group_count,
@@ -26,13 +26,13 @@ module Legion
 
               def join_group(group_id:, role: :contributor, members: [], **)
                 group = social_graph.join_group(group_id: group_id, role: role, members: members)
-                Legion::Logging.info "[social] joined group=#{group_id} role=#{role}"
+                log.info "[social] joined group=#{group_id} role=#{role}"
                 { success: true, group_id: group_id, role: role, group: group }
               end
 
               def leave_group(group_id:, **)
                 social_graph.leave_group(group_id)
-                Legion::Logging.info "[social] left group=#{group_id}"
+                log.info "[social] left group=#{group_id}"
                 { success: true, group_id: group_id }
               end
 
@@ -41,7 +41,7 @@ module Legion
                 return { success: false, error: 'invalid dimension' } unless result
 
                 rep = social_graph.reputation_for(agent_id)
-                Legion::Logging.debug "[social] reputation updated agent=#{agent_id} dim=#{dimension}"
+                log.debug "[social] reputation updated agent=#{agent_id} dim=#{dimension}"
                 { success: true, reputation: rep }
               end
 
@@ -49,19 +49,19 @@ module Legion
                 rep = social_graph.reputation_for(agent_id)
                 return { error: 'unknown agent' } unless rep
 
-                Legion::Logging.debug "[social] reputation for #{agent_id}: #{rep[:composite]}"
+                log.debug "[social] reputation for #{agent_id}: #{rep[:composite]}"
                 rep
               end
 
               def reciprocity_status(agent_id:, **)
                 balance = social_graph.reciprocity_balance(agent_id)
-                Legion::Logging.debug "[social] reciprocity #{agent_id}: #{balance}"
+                log.debug "[social] reciprocity #{agent_id}: #{balance}"
                 balance
               end
 
               def record_exchange(agent_id:, action:, direction:, **)
                 social_graph.record_reciprocity(agent_id: agent_id, action: action, direction: direction.to_sym)
-                Legion::Logging.debug "[social] exchange agent=#{agent_id} dir=#{direction}"
+                log.debug "[social] exchange agent=#{agent_id} dir=#{direction}"
                 { success: true }
               end
 
@@ -69,7 +69,7 @@ module Legion
                 violation = social_graph.record_violation(group_id: group_id, type: type.to_sym, agent_id: agent_id)
                 return { success: false, error: 'invalid group or violation type' } unless violation
 
-                Legion::Logging.warn "[social] violation: #{type} by #{agent_id} in #{group_id}"
+                log.warn "[social] violation: #{type} by #{agent_id} in #{group_id}"
                 { success: true, violation: violation, cohesion: social_graph.group_cohesion(group_id)&.round(4) }
               end
 
@@ -89,12 +89,12 @@ module Legion
 
               def social_status(**)
                 state = social_graph.to_h
-                Legion::Logging.debug "[social] status: #{state[:social_standing]}"
+                log.debug "[social] status: #{state[:social_standing]}"
                 state
               end
 
               def social_stats(**)
-                Legion::Logging.debug '[social] stats'
+                log.debug '[social] stats'
 
                 {
                   groups:         social_graph.group_count,

@@ -18,8 +18,8 @@ module Legion
                 empathy_label   = Helpers::Constants.label_for(Helpers::Constants::EMPATHY_LABELS, value)
                 resonance_label = Helpers::Constants.label_for(Helpers::Constants::RESONANCE_LABELS, value)
 
-                Legion::Logging.debug "[cognitive_mirror] resonance agent=#{agent_id} " \
-                                      "value=#{value.round(3)} empathy=#{empathy_label}"
+                log.debug "[cognitive_mirror] resonance agent=#{agent_id} " \
+                          "value=#{value.round(3)} empathy=#{empathy_label}"
 
                 {
                   success:          true,
@@ -39,12 +39,12 @@ module Legion
                 if agent_id
                   eng.decay_resonance(agent_id)
                   after = eng.empathic_resonance(agent_id)
-                  Legion::Logging.debug "[cognitive_mirror] resonance decayed agent=#{agent_id} after=#{after.round(3)}"
+                  log.debug "[cognitive_mirror] resonance decayed agent=#{agent_id} after=#{after.round(3)}"
                   { success: true, agent_id: agent_id, resonance_after: after }
                 else
                   eng.decay_all_resonances
                   summary = eng.known_agents.to_h { |id| [id, eng.empathic_resonance(id)] }
-                  Legion::Logging.debug "[cognitive_mirror] global resonance decay agents=#{summary.size}"
+                  log.debug "[cognitive_mirror] global resonance decay agents=#{summary.size}"
                   { success: true, agents_decayed: summary.size, resonances: summary }
                 end
               end

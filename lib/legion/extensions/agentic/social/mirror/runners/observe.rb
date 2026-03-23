@@ -14,7 +14,7 @@ module Legion
                 eng = engine || mirror_engine
 
                 unless Helpers::Constants::ACTION_TYPES.include?(action_type.to_sym)
-                  Legion::Logging.debug "[cognitive_mirror] unknown action_type=#{action_type}, mapping to :unknown"
+                  log.debug "[cognitive_mirror] unknown action_type=#{action_type}, mapping to :unknown"
                 end
 
                 event = eng.observe(
@@ -26,8 +26,8 @@ module Legion
 
                 resonance_label = Helpers::Constants.label_for(Helpers::Constants::RESONANCE_LABELS,
                                                                eng.empathic_resonance(agent_id))
-                Legion::Logging.debug "[cognitive_mirror] observed action=#{event.action_type} " \
-                                      "agent=#{agent_id} resonance_tier=#{resonance_label}"
+                log.debug "[cognitive_mirror] observed action=#{event.action_type} " \
+                          "agent=#{agent_id} resonance_tier=#{resonance_label}"
 
                 { success: true, event: event.to_h, resonance_tier: resonance_label }
               end

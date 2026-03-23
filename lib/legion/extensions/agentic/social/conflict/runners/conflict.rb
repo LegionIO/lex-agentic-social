@@ -15,17 +15,17 @@ module Legion
 
                 id = conflict_log.record(parties: parties, severity: severity, description: description)
                 conflict = conflict_log.get(id)
-                Legion::Logging.info "[conflict] registered: id=#{id[0..7]} severity=#{severity} posture=#{conflict[:posture]} parties=#{parties.join(',')}"
+                log.info "[conflict] registered: id=#{id[0..7]} severity=#{severity} posture=#{conflict[:posture]} parties=#{parties.join(',')}"
                 { conflict_id: id, severity: severity, posture: conflict[:posture] }
               end
 
               def add_exchange(conflict_id:, speaker:, message:, **)
                 result = conflict_log.add_exchange(conflict_id, speaker: speaker, message: message)
                 if result
-                  Legion::Logging.debug "[conflict] exchange: id=#{conflict_id[0..7]} speaker=#{speaker}"
+                  log.debug "[conflict] exchange: id=#{conflict_id[0..7]} speaker=#{speaker}"
                   { recorded: true }
                 else
-                  Legion::Logging.debug "[conflict] exchange failed: id=#{conflict_id[0..7]} not found"
+                  log.debug "[conflict] exchange failed: id=#{conflict_id[0..7]} not found"
                   { error: :not_found }
                 end
               end
@@ -33,7 +33,7 @@ module Legion
               def resolve_conflict(conflict_id:, outcome:, resolution_notes: nil, **)
                 conflict = conflict_log.get(conflict_id)
                 unless conflict
-                  Legion::Logging.debug "[conflict] resolve failed: id=#{conflict_id[0..7]} not found"
+                  log.debug "[conflict] resolve failed: id=#{conflict_id[0..7]} not found"
                   return { error: :not_found }
                 end
 
@@ -48,23 +48,23 @@ module Legion
 
                 result = conflict_log.resolve(conflict_id, outcome: outcome, resolution_notes: resolution_notes)
                 if result
-                  Legion::Logging.info "[conflict] resolved: id=#{conflict_id[0..7]} outcome=#{outcome}"
+                  log.info "[conflict] resolved: id=#{conflict_id[0..7]} outcome=#{outcome}"
                   { resolved: true, outcome: outcome }
                 else
-                  Legion::Logging.debug "[conflict] resolve failed: id=#{conflict_id[0..7]} not found"
+                  log.debug "[conflict] resolve failed: id=#{conflict_id[0..7]} not found"
                   { error: :not_found }
                 end
               end
 
               def get_conflict(conflict_id:, **)
                 conflict = conflict_log.get(conflict_id)
-                Legion::Logging.debug "[conflict] get: id=#{conflict_id[0..7]} found=#{!conflict.nil?}"
+                log.debug "[conflict] get: id=#{conflict_id[0..7]} found=#{!conflict.nil?}"
                 conflict ? { found: true, conflict: conflict } : { found: false }
               end
 
               def active_conflicts(**)
                 conflicts = conflict_log.active_conflicts
-                Legion::Logging.debug "[conflict] active: count=#{conflicts.size}"
+                log.debug "[conflict] active: count=#{conflicts.size}"
                 { conflicts: conflicts, count: conflicts.size }
               end
 
@@ -88,13 +88,13 @@ module Legion
                   conflict_log.add_exchange(c[:conflict_id], speaker: :system, message: message)
                 end
                 stale_ids = stale.map { |c| c[:conflict_id] }
-                Legion::Logging.debug "[conflict] stale check: active=#{active.size} stale=#{stale.size}"
+                log.debug "[conflict] stale check: active=#{active.size} stale=#{stale.size}"
                 { checked: active.size, stale_count: stale.size, stale_ids: stale_ids }
               end
 
               def recommended_posture(severity:, **)
                 posture = Helpers::Severity.recommended_posture(severity)
-                Legion::Logging.debug "[conflict] posture: severity=#{severity} posture=#{posture}"
+                log.debug "[conflict] posture: severity=#{severity} posture=#{posture}"
                 { severity: severity, posture: posture }
               end
 

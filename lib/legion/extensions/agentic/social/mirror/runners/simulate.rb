@@ -16,7 +16,7 @@ module Legion
 
                 event = eng.events.find { |e| e.id == event_id }
                 unless event
-                  Legion::Logging.debug "[cognitive_mirror] simulate_action: event_id=#{event_id} not found"
+                  log.debug "[cognitive_mirror] simulate_action: event_id=#{event_id} not found"
                   return { success: false, error: 'event not found', event_id: event_id }
                 end
 
@@ -24,8 +24,8 @@ module Legion
                 eng.boost_resonance(event.agent_id)
 
                 confidence_label = Helpers::Constants.label_for(Helpers::Constants::CONFIDENCE_LABELS, sim.confidence)
-                Legion::Logging.debug "[cognitive_mirror] simulated event=#{event_id} " \
-                                      "confidence_tier=#{confidence_label} resonance=#{sim.emotional_resonance.round(3)}"
+                log.debug "[cognitive_mirror] simulated event=#{event_id} " \
+                          "confidence_tier=#{confidence_label} resonance=#{sim.emotional_resonance.round(3)}"
 
                 { success: true, simulation: sim.to_h, confidence_tier: confidence_label }
               end
@@ -35,11 +35,11 @@ module Legion
                 recorded = eng.record_accuracy(simulation_id, accuracy)
 
                 unless recorded
-                  Legion::Logging.debug "[cognitive_mirror] record_accuracy: simulation_id=#{simulation_id} not found"
+                  log.debug "[cognitive_mirror] record_accuracy: simulation_id=#{simulation_id} not found"
                   return { success: false, error: 'simulation not found', simulation_id: simulation_id }
                 end
 
-                Legion::Logging.debug "[cognitive_mirror] accuracy recorded simulation=#{simulation_id} score=#{accuracy}"
+                log.debug "[cognitive_mirror] accuracy recorded simulation=#{simulation_id} score=#{accuracy}"
                 { success: true, simulation_id: simulation_id, accuracy: accuracy.to_f.clamp(0.0, 1.0) }
               end
 

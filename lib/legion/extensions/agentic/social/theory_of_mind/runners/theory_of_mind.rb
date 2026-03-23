@@ -15,8 +15,8 @@ module Legion
                 extract_mesh_observations(tick_results)
                 tracker.decay_all
 
-                Legion::Logging.debug "[tom] agents=#{tracker.agents_tracked} " \
-                                      "beliefs=#{tracker.total_beliefs} accuracy=#{tracker.avg_prediction_accuracy}"
+                log.debug "[tom] agents=#{tracker.agents_tracked} " \
+                          "beliefs=#{tracker.total_beliefs} accuracy=#{tracker.avg_prediction_accuracy}"
 
                 tracker.to_h
               end
@@ -26,7 +26,7 @@ module Legion
                 apply_desire_observation(agent_id, observations)
                 apply_intention_observation(agent_id, observations)
 
-                Legion::Logging.debug "[tom] observed agent=#{agent_id}"
+                log.debug "[tom] observed agent=#{agent_id}"
                 { success: true, model: tracker.model_for(agent_id).to_h }
               end
 
@@ -34,7 +34,7 @@ module Legion
                 prediction = tracker.predict_behavior(agent_id: agent_id, context: context)
                 return { error: 'unknown agent' } unless prediction
 
-                Legion::Logging.debug "[tom] predicted action for #{agent_id}: #{prediction[:predicted_action]}"
+                log.debug "[tom] predicted action for #{agent_id}: #{prediction[:predicted_action]}"
                 prediction
               end
 
@@ -42,7 +42,7 @@ module Legion
                 result = tracker.record_prediction_outcome(agent_id: agent_id, outcome: outcome.to_sym)
                 return { error: 'unknown agent' } unless result
 
-                Legion::Logging.debug "[tom] outcome for #{agent_id}: #{outcome}"
+                log.debug "[tom] outcome for #{agent_id}: #{outcome}"
                 { success: true, accuracy: tracker.model_for(agent_id).prediction_accuracy.round(4) }
               end
 
@@ -50,7 +50,7 @@ module Legion
                 false_beliefs = tracker.false_belief_check(agent_id: agent_id, known_truths: known_truths)
                 return { error: 'unknown agent' } unless false_beliefs
 
-                Legion::Logging.debug "[tom] false beliefs for #{agent_id}: #{false_beliefs.size}"
+                log.debug "[tom] false beliefs for #{agent_id}: #{false_beliefs.size}"
                 { agent_id: agent_id, false_beliefs: false_beliefs, count: false_beliefs.size }
               end
 
@@ -58,7 +58,7 @@ module Legion
                 perspective = tracker.perspective_take(agent_id: agent_id)
                 return { error: 'unknown agent' } unless perspective
 
-                Legion::Logging.debug "[tom] perspective for #{agent_id}"
+                log.debug "[tom] perspective for #{agent_id}"
                 { agent_id: agent_id, perspective: perspective }
               end
 
@@ -66,7 +66,7 @@ module Legion
                 comparison = tracker.compare_agents(agent_ids: agent_ids)
                 return { error: 'no matching agents' } unless comparison
 
-                Legion::Logging.debug "[tom] comparing #{agent_ids.size} agents"
+                log.debug "[tom] comparing #{agent_ids.size} agents"
                 comparison
               end
 
@@ -85,7 +85,7 @@ module Legion
               end
 
               def tom_stats(**)
-                Legion::Logging.debug '[tom] stats'
+                log.debug '[tom] stats'
                 tracker.to_h.merge(
                   models: tracker.agent_models.transform_values(&:to_h)
                 )

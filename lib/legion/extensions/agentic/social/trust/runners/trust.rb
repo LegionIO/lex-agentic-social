@@ -13,10 +13,10 @@ module Legion
               def get_trust(agent_id:, domain: :general, **)
                 entry = trust_map.get(agent_id, domain: domain)
                 if entry
-                  Legion::Logging.debug "[trust] get agent=#{agent_id} domain=#{domain} composite=#{entry[:composite].round(2)}"
+                  log.debug "[trust] get agent=#{agent_id} domain=#{domain} composite=#{entry[:composite].round(2)}"
                   { found: true, trust: entry }
                 else
-                  Legion::Logging.debug "[trust] get agent=#{agent_id} domain=#{domain} not found"
+                  log.debug "[trust] get agent=#{agent_id} domain=#{domain} not found"
                   { found: false, agent_id: agent_id, domain: domain }
                 end
               end
@@ -25,7 +25,7 @@ module Legion
                 entry = trust_map.record_interaction(agent_id, domain: domain, positive: positive)
                 msg = "[trust] interaction: agent=#{agent_id} domain=#{domain} positive=#{positive} " \
                       "composite=#{entry[:composite].round(2)} total=#{entry[:interaction_count]}"
-                Legion::Logging.info msg
+                log.info msg
                 {
                   agent_id:     agent_id,
                   domain:       domain,
@@ -39,26 +39,26 @@ module Legion
                 amt = amount || Helpers::TrustModel::TRUST_REINFORCEMENT
                 trust_map.reinforce_dimension(agent_id, domain: domain, dimension: dimension, amount: amt)
                 entry = trust_map.get(agent_id, domain: domain)
-                Legion::Logging.debug "[trust] reinforce: agent=#{agent_id} dimension=#{dimension} amount=#{amt} composite=#{entry[:composite].round(2)}"
+                log.debug "[trust] reinforce: agent=#{agent_id} dimension=#{dimension} amount=#{amt} composite=#{entry[:composite].round(2)}"
                 { agent_id: agent_id, domain: domain, dimension: dimension, composite: entry[:composite] }
               end
 
               def decay_trust(**)
                 decayed = trust_map.decay_all
-                Legion::Logging.debug "[trust] decay cycle: entries_updated=#{decayed}"
+                log.debug "[trust] decay cycle: entries_updated=#{decayed}"
                 { decayed: decayed }
               end
 
               def trusted_agents(domain: :general, min_trust: nil, **)
                 min = min_trust || Helpers::TrustModel::TRUST_CONSIDER_THRESHOLD
                 agents = trust_map.trusted_agents(domain: domain, min_trust: min)
-                Legion::Logging.debug "[trust] trusted agents: domain=#{domain} min=#{min} count=#{agents.size}"
+                log.debug "[trust] trusted agents: domain=#{domain} min=#{min} count=#{agents.size}"
                 { agents: agents, count: agents.size }
               end
 
               def delegatable_agents(domain: :general, **)
                 agents = trust_map.delegatable_agents(domain: domain)
-                Legion::Logging.debug "[trust] delegatable agents: domain=#{domain} count=#{agents.size}"
+                log.debug "[trust] delegatable agents: domain=#{domain} count=#{agents.size}"
                 { agents: agents, count: agents.size }
               end
 

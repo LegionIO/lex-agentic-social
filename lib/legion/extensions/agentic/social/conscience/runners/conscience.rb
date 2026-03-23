@@ -17,8 +17,8 @@ module Legion
                 result = moral_store.evaluator.evaluate(action: action, context: context)
                 moral_store.record_evaluation(result)
 
-                Legion::Logging.debug "[conscience] action=#{action} verdict=#{result[:verdict]} " \
-                                      "score=#{result[:weighted_score]} dilemma=#{result[:dilemma]&.dig(:type)}"
+                log.debug "[conscience] action=#{action} verdict=#{result[:verdict]} " \
+                          "score=#{result[:weighted_score]} dilemma=#{result[:dilemma]&.dig(:type)}"
 
                 result
               end
@@ -28,8 +28,8 @@ module Legion
                 stats = moral_store.aggregate_stats
                 sensitivities = moral_store.foundation_sensitivities
 
-                Legion::Logging.debug "[conscience] consistency=#{stats[:consistency_score]} " \
-                                      "evaluations=#{stats[:total_evaluations]}"
+                log.debug "[conscience] consistency=#{stats[:consistency_score]} " \
+                          "evaluations=#{stats[:total_evaluations]}"
 
                 {
                   sensitivities: sensitivities,
@@ -41,7 +41,7 @@ module Legion
               # Recent moral evaluation history
               def moral_history(limit: 20, **)
                 recent = moral_store.recent_evaluations(limit)
-                Legion::Logging.debug "[conscience] history: #{recent.size} entries"
+                log.debug "[conscience] history: #{recent.size} entries"
 
                 {
                   history: recent,
@@ -57,9 +57,9 @@ module Legion
 
                 moral_store.record_follow_through(effective_verdict, outcome)
 
-                Legion::Logging.debug "[conscience] follow_through action=#{action} " \
-                                      "verdict=#{effective_verdict} outcome=#{outcome} " \
-                                      "consistency=#{moral_store.consistency_score}"
+                log.debug "[conscience] follow_through action=#{action} " \
+                          "verdict=#{effective_verdict} outcome=#{outcome} " \
+                          "consistency=#{moral_store.consistency_score}"
 
                 {
                   action:      action,
@@ -72,7 +72,7 @@ module Legion
               # List unresolved moral dilemmas (cases where foundations strongly disagreed)
               def moral_dilemmas(**)
                 open = moral_store.open_dilemmas
-                Legion::Logging.debug "[conscience] dilemmas: #{open.size} open"
+                log.debug "[conscience] dilemmas: #{open.size} open"
 
                 {
                   dilemmas: open,
@@ -83,7 +83,7 @@ module Legion
               # Aggregate moral reasoning stats
               def conscience_stats(**)
                 stats = moral_store.aggregate_stats
-                Legion::Logging.debug '[conscience] stats'
+                log.debug '[conscience] stats'
 
                 stats.merge(
                   verdict_distribution: verdict_distribution(stats[:verdict_counts]),

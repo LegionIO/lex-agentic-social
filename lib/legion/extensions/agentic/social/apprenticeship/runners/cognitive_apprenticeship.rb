@@ -21,10 +21,10 @@ module Legion
                 )
 
                 if appr
-                  Legion::Logging.info "[cognitive_apprenticeship] created id=#{appr.id} skill=#{skill_name} domain=#{domain}"
+                  log.info "[cognitive_apprenticeship] created id=#{appr.id} skill=#{skill_name} domain=#{domain}"
                   { success: true, apprenticeship: appr.to_h }
                 else
-                  Legion::Logging.warn '[cognitive_apprenticeship] create failed: capacity reached'
+                  log.warn '[cognitive_apprenticeship] create failed: capacity reached'
                   { success: false, reason: :capacity_reached }
                 end
               end
@@ -39,8 +39,8 @@ module Legion
                 )
 
                 if appr
-                  Legion::Logging.debug "[cognitive_apprenticeship] session id=#{apprenticeship_id} method=#{method} " \
-                                        "success=#{success} mastery=#{appr.mastery.round(3)}"
+                  log.debug "[cognitive_apprenticeship] session id=#{apprenticeship_id} method=#{method} " \
+                            "success=#{success} mastery=#{appr.mastery.round(3)}"
                   { success: true, apprenticeship: appr.to_h }
                 else
                   { success: false, reason: :not_found }
@@ -51,7 +51,7 @@ module Legion
                 method = engine.recommend_method(apprenticeship_id: apprenticeship_id)
 
                 if method
-                  Legion::Logging.debug "[cognitive_apprenticeship] recommend id=#{apprenticeship_id} method=#{method}"
+                  log.debug "[cognitive_apprenticeship] recommend id=#{apprenticeship_id} method=#{method}"
                   { success: true, apprenticeship_id: apprenticeship_id, recommended_method: method }
                 else
                   { success: false, reason: :not_found }
@@ -60,31 +60,31 @@ module Legion
 
               def graduated_apprenticeships(**)
                 list = engine.graduated_apprenticeships
-                Legion::Logging.debug "[cognitive_apprenticeship] graduated count=#{list.size}"
+                log.debug "[cognitive_apprenticeship] graduated count=#{list.size}"
                 { success: true, apprenticeships: list.map(&:to_h), count: list.size }
               end
 
               def active_apprenticeships(**)
                 list = engine.active_apprenticeships
-                Legion::Logging.debug "[cognitive_apprenticeship] active count=#{list.size}"
+                log.debug "[cognitive_apprenticeship] active count=#{list.size}"
                 { success: true, apprenticeships: list.map(&:to_h), count: list.size }
               end
 
               def mentor_apprenticeships(mentor_id:, **)
                 list = engine.by_mentor(mentor_id: mentor_id)
-                Legion::Logging.debug "[cognitive_apprenticeship] mentor=#{mentor_id} count=#{list.size}"
+                log.debug "[cognitive_apprenticeship] mentor=#{mentor_id} count=#{list.size}"
                 { success: true, mentor_id: mentor_id, apprenticeships: list.map(&:to_h), count: list.size }
               end
 
               def apprentice_apprenticeships(apprentice_id:, **)
                 list = engine.by_apprentice(apprentice_id: apprentice_id)
-                Legion::Logging.debug "[cognitive_apprenticeship] apprentice=#{apprentice_id} count=#{list.size}"
+                log.debug "[cognitive_apprenticeship] apprentice=#{apprentice_id} count=#{list.size}"
                 { success: true, apprentice_id: apprentice_id, apprenticeships: list.map(&:to_h), count: list.size }
               end
 
               def domain_apprenticeships(domain:, **)
                 list = engine.by_domain(domain: domain)
-                Legion::Logging.debug "[cognitive_apprenticeship] domain=#{domain} count=#{list.size}"
+                log.debug "[cognitive_apprenticeship] domain=#{domain} count=#{list.size}"
                 { success: true, domain: domain, apprenticeships: list.map(&:to_h), count: list.size }
               end
 
@@ -94,7 +94,7 @@ module Legion
 
               def cognitive_apprenticeship_stats(**)
                 stats = engine.to_h
-                Legion::Logging.debug "[cognitive_apprenticeship] stats=#{stats.inspect}"
+                log.debug "[cognitive_apprenticeship] stats=#{stats.inspect}"
                 { success: true }.merge(stats)
               end
 
