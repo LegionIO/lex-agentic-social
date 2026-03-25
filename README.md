@@ -5,7 +5,7 @@ Domain consolidation gem for social cognition, governance, and multi-agent inter
 ## Overview
 
 **Gem**: `lex-agentic-social`
-**Version**: 0.1.1
+**Version**: 0.1.0
 **Namespace**: `Legion::Extensions::Agentic::Social`
 
 ## Sub-Modules
@@ -51,7 +51,7 @@ gem 'lex-agentic-social'
 
 ```bash
 bundle install
-bundle exec rspec        # 1646 examples, 0 failures
+bundle exec rspec        # 1673 examples, 0 failures
 bundle exec rubocop      # 0 offenses
 ```
 
