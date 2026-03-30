@@ -114,7 +114,7 @@ module Legion
                   dataset.where(agent_id: pair[0], domain: pair[1]).delete unless memory_pairs.include?(pair)
                 end
               rescue StandardError => e
-                Legion::Logging.warn "[trust] save_to_local failed: #{e.message}" if defined?(Legion::Logging)
+                Legion::Logging.warn "[trust] save_to_local failed: #{e.message}"
               end
 
               def load_from_local
@@ -143,7 +143,7 @@ module Legion
                   }
                 end
               rescue StandardError => e
-                Legion::Logging.warn "[trust] load_from_local failed: #{e.message}" if defined?(Legion::Logging)
+                Legion::Logging.warn "[trust] load_from_local failed: #{e.message}"
               end
 
               private

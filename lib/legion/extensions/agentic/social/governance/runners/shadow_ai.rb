@@ -6,7 +6,7 @@ module Legion
       module Social
         module Governance
           module Runners
-            module ShadowAi
+            module ShadowAi # rubocop:disable Legion/Extension/RunnerIncludeHelpers
               def scan_unregistered_extensions(**)
                 installed = Bundler.load.specs.select { |s| s.name.start_with?('lex-') }.map(&:name)
                 registered = registered_extension_names
@@ -59,7 +59,7 @@ module Legion
                 return [] unless conn&.table_exists?(:extension_registry)
 
                 conn[:extension_registry].select_map(:gem_name)
-              rescue StandardError
+              rescue StandardError => _e
                 []
               end
 
@@ -71,7 +71,7 @@ module Legion
                 return false unless providers.is_a?(Hash)
 
                 providers.dig(provider, :enabled) == true
-              rescue StandardError
+              rescue StandardError => _e
                 false
               end
 

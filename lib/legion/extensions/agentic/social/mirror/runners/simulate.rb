@@ -7,8 +7,8 @@ module Legion
         module Mirror
           module Runners
             module Simulate
-              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers) &&
-                                                          Legion::Extensions::Helpers.const_defined?(:Lex)
+              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
+                                                          Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
               def simulate_action(event_id:, confidence: Helpers::Constants::SIMULATION_CONFIDENCE_DEFAULT,
                                   engine: nil, **)

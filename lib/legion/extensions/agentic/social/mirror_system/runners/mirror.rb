@@ -7,8 +7,8 @@ module Legion
         module MirrorSystem
           module Runners
             module Mirror
-              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers) &&
-                                                          Legion::Extensions::Helpers.const_defined?(:Lex)
+              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
+                                                          Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
               def observe_behavior(agent_id:, action:, domain:, context: nil, outcome: nil, **)
                 obs = mirror_system.observe(agent_id: agent_id, action: action, domain: domain, context: context, outcome: outcome)

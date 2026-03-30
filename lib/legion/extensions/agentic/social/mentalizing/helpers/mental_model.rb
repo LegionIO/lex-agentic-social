@@ -59,8 +59,8 @@ module Legion
                 beliefs_b = beliefs_on_subject(agent_b, subject)
                 return 0.0 if beliefs_a.empty? || beliefs_b.empty?
 
-                conf_a = beliefs_a.map(&:confidence).sum / beliefs_a.size
-                conf_b = beliefs_b.map(&:confidence).sum / beliefs_b.size
+                conf_a = beliefs_a.sum(&:confidence) / beliefs_a.size
+                conf_b = beliefs_b.sum(&:confidence) / beliefs_b.size
                 1.0 - (conf_a - conf_b).abs
               end
 

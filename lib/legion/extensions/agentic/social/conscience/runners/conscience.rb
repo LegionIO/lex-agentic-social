@@ -7,8 +7,8 @@ module Legion
         module Conscience
           module Runners
             module Conscience
-              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers) &&
-                                                          Legion::Extensions::Helpers.const_defined?(:Lex)
+              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
+                                                          Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
               # Full moral assessment of a proposed action.
               # action: string or symbol describing what is about to happen

@@ -7,8 +7,8 @@ module Legion
         module Consent
           module Runners
             module Consent
-              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers) &&
-                                                          Legion::Extensions::Helpers.const_defined?(:Lex)
+              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
+                                                          Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
               def check_consent(domain:, _action_type: :general, **)
                 tier = consent_map.get_tier(domain)

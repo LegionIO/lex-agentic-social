@@ -7,8 +7,8 @@ module Legion
         module Conflict
           module Runners
             module Conflict
-              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers) &&
-                                                          Legion::Extensions::Helpers.const_defined?(:Lex)
+              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
+                                                          Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
               def register_conflict(parties:, severity:, description:, **)
                 return { error: :invalid_severity, valid: Helpers::Severity::LEVELS } unless Helpers::Severity.valid_level?(severity)

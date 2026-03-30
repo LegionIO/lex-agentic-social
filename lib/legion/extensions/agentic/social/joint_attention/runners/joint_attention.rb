@@ -7,8 +7,8 @@ module Legion
         module JointAttention
           module Runners
             module JointAttention
-              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers) &&
-                                                          Legion::Extensions::Helpers.const_defined?(:Lex)
+              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
+                                                          Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
               def create_attention_target(name:, domain:, creator:, priority: 0.5, **)
                 target = joint_focus_manager.create_target(name: name, domain: domain, priority: priority, creator: creator)
