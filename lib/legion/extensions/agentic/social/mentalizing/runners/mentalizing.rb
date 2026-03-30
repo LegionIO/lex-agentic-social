@@ -7,8 +7,8 @@ module Legion
         module Mentalizing
           module Runners
             module Mentalizing
-              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers) &&
-                                                          Legion::Extensions::Helpers.const_defined?(:Lex)
+              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
+                                                          Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
               def attribute_belief(agent_id:, subject:, content:, confidence: nil, depth: 0, about_agent_id: nil, **)
                 depth = [depth.to_i, Helpers::Constants::MAX_RECURSION_DEPTH].min

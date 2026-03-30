@@ -7,8 +7,8 @@ module Legion
         module Mirror
           module Runners
             module Observe
-              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers) &&
-                                                          Legion::Extensions::Helpers.const_defined?(:Lex)
+              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
+                                                          Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
               def observe_action(agent_id:, action_type:, context: {}, emotional_valence: 0.0, engine: nil, **)
                 eng = engine || mirror_engine

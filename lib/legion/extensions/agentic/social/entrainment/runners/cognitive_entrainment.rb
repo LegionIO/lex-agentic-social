@@ -7,8 +7,8 @@ module Legion
         module Entrainment
           module Runners
             module CognitiveEntrainment
-              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers) &&
-                                                          Legion::Extensions::Helpers.const_defined?(:Lex)
+              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
+                                                          Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
               def create_entrainment_pairing(agent_a:, agent_b:, domain:, **)
                 pairing = engine.create_pairing(agent_a: agent_a, agent_b: agent_b, domain: domain)

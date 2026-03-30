@@ -154,7 +154,7 @@ module Legion
                   end
                 end
               rescue StandardError => e
-                Legion::Logging.warn "[consent] save_to_local failed: #{e.message}" if defined?(Legion::Logging)
+                Legion::Logging.warn "[consent] save_to_local failed: #{e.message}"
               end
 
               def load_from_local
@@ -166,7 +166,7 @@ module Legion
                     ::JSON.parse(row[:history] || '[]', symbolize_names: false).map do |h|
                       { from: h['from'].to_sym, to: h['to'].to_sym, at: h['at'] }
                     end
-                  rescue StandardError
+                  rescue StandardError => _e
                     []
                   end
 
@@ -180,7 +180,7 @@ module Legion
                   }
                 end
               rescue StandardError => e
-                Legion::Logging.warn "[consent] load_from_local failed: #{e.message}" if defined?(Legion::Logging)
+                Legion::Logging.warn "[consent] load_from_local failed: #{e.message}"
               end
 
               private

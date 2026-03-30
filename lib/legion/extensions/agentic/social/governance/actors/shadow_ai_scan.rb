@@ -5,7 +5,7 @@ module Legion
     module Agentic
       module Social
         module Governance
-          module Actors
+          module Actor
             class ShadowAiScan < Legion::Extensions::Actors::Every
               def runner_class = Runners::ShadowAi
               def runner_function = 'full_scan'

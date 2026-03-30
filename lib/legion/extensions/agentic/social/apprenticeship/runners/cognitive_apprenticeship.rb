@@ -7,8 +7,8 @@ module Legion
         module Apprenticeship
           module Runners
             module CognitiveApprenticeship
-              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers) &&
-                                                          Legion::Extensions::Helpers.const_defined?(:Lex)
+              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
+                                                          Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
               def create_apprenticeship(skill_name:, domain:, mentor_id:, apprentice_id:, **)
                 return { success: false, reason: :param_too_short } if [skill_name, domain, mentor_id, apprentice_id].any? { |p| p.to_s.length < 3 }

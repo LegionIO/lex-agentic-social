@@ -7,8 +7,8 @@ module Legion
         module MoralReasoning
           module Runners
             module MoralReasoning
-              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers) &&
-                                                          Legion::Extensions::Helpers.const_defined?(:Lex)
+              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
+                                                          Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
               def evaluate_moral_action(action:, affected_foundations:, domain: :general, description: nil, **)
                 log.debug "[moral_reasoning] evaluate_action: action=#{action} domain=#{domain}"

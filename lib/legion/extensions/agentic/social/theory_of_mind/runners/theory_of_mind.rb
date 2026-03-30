@@ -7,8 +7,8 @@ module Legion
         module TheoryOfMind
           module Runners
             module TheoryOfMind
-              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers) &&
-                                                          Legion::Extensions::Helpers.const_defined?(:Lex)
+              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
+                                                          Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
               def update_theory_of_mind(tick_results: {}, **)
                 extract_social_observations(tick_results)

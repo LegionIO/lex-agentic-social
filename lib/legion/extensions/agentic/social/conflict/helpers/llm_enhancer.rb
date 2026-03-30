@@ -18,7 +18,7 @@ module Legion
 
               def available?
                 defined?(Legion::LLM) && Legion::LLM.respond_to?(:started?) && Legion::LLM.started?
-              rescue StandardError
+              rescue StandardError => _e
                 false
               end
 
@@ -68,7 +68,7 @@ module Legion
                 !!(defined?(Legion::LLM::Pipeline::GaiaCaller) &&
                    Legion::LLM.respond_to?(:pipeline_enabled?) &&
                    Legion::LLM.pipeline_enabled?)
-              rescue StandardError
+              rescue StandardError => _e
                 false
               end
               private_class_method :pipeline_available?

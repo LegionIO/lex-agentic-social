@@ -7,8 +7,8 @@ module Legion
         module Mirror
           module Runners
             module Resonance
-              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers) &&
-                                                          Legion::Extensions::Helpers.const_defined?(:Lex)
+              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
+                                                          Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
               def empathic_resonance(agent_id:, engine: nil, **)
                 eng = engine || mirror_engine

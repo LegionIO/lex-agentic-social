@@ -7,8 +7,8 @@ module Legion
         module Governance
           module Runners
             module Governance
-              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers) &&
-                                                          Legion::Extensions::Helpers.const_defined?(:Lex)
+              include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
+                                                          Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
               def create_proposal(category:, description:, proposer:, council_size: nil, **)
                 return { error: :invalid_category, valid: Helpers::Layers::PROPOSAL_CATEGORIES } unless Helpers::Layers.valid_category?(category)
