@@ -4,7 +4,9 @@ module Legion
   module Extensions
     module Agentic
       module Social
-        VERSION = '0.1.8'
+        module Attachment
+          VERSION = '0.1.0'
+        end
       end
     end
   end
