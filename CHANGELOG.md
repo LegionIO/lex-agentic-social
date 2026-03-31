@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.7] - 2026-03-31
+
+### Changed
+- Migrate `TrustMap` persistence from Data::Local SQLite to Apollo Local (`to_apollo_entries`, `from_apollo`)
+- Add dirty tracking (`dirty?`, `mark_clean!`) to `TrustMap` matching SocialGraph/MentalStateTracker pattern
+- Tag schema: `['trust', 'trust_entry', '<agent_id>', '<domain>']` with optional `'partner'` tag via BondRegistry
+- Remove Data::Local migration registration from trust entry point (migration file retained for existing installs)
+- Add one-time `scripts/migrate_trust_to_apollo.rb` for legacy SQLite data migration
+
 ## [0.1.6] - 2026-03-31
 
 ### Added
