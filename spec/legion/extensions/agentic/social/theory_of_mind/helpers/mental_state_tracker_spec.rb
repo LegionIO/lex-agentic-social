@@ -225,4 +225,120 @@ RSpec.describe Legion::Extensions::Agentic::Social::TheoryOfMind::Helpers::Menta
       expect(result).to have_key(:prediction_log_size)
     end
   end
+
+  describe '#dirty?' do
+    it 'starts clean' do
+      expect(tracker.dirty?).to be false
+    end
+
+    it 'becomes dirty after update_belief' do
+      tracker.update_belief(agent_id: :a1, domain: :test, content: 'v', confidence: 0.8)
+      expect(tracker.dirty?).to be true
+    end
+
+    it 'becomes dirty after update_desire' do
+      tracker.update_desire(agent_id: :a1, goal: 'deploy')
+      expect(tracker.dirty?).to be true
+    end
+
+    it 'becomes dirty after infer_intention' do
+      tracker.infer_intention(agent_id: :a1, action: :send)
+      expect(tracker.dirty?).to be true
+    end
+
+    it 'becomes clean after mark_clean!' do
+      tracker.update_belief(agent_id: :a1, domain: :test, content: 'v', confidence: 0.8)
+      tracker.mark_clean!
+      expect(tracker.dirty?).to be false
+    end
+  end
+
+  describe '#to_apollo_entries' do
+    it 'returns empty array when no agent models' do
+      expect(tracker.to_apollo_entries).to eq([])
+    end
+
+    it 'returns one entry per tracked agent' do
+      tracker.update_belief(agent_id: :a1, domain: :x, content: 'v', confidence: 0.9)
+      tracker.update_belief(agent_id: :a2, domain: :y, content: 'w', confidence: 0.8)
+      expect(tracker.to_apollo_entries.size).to eq(2)
+    end
+
+    it 'entry content is a JSON string with agent_id' do
+      tracker.update_belief(agent_id: :a1, domain: :x, content: 'v', confidence: 0.9)
+      entry = tracker.to_apollo_entries.first
+      parsed = JSON.parse(entry[:content])
+      expect(parsed).to have_key('agent_id')
+    end
+
+    it 'entry tags include theory_of_mind, agent_model, and agent_id' do
+      tracker.update_belief(agent_id: :a1, domain: :x, content: 'v', confidence: 0.9)
+      entry = tracker.to_apollo_entries.first
+      expect(entry[:tags]).to include('theory_of_mind', 'agent_model')
+      expect(entry[:tags].any? { |t| t.to_s == 'a1' }).to be true
+    end
+  end
+
+  describe '#from_apollo' do
+    let(:mock_store) do
+      double('ApolloLocal').tap do |store|
+        allow(store).to receive(:query).and_return({ success: false, results: [] })
+      end
+    end
+
+    it 'returns false when no results' do
+      expect(tracker.from_apollo(store: mock_store)).to be false
+    end
+
+    it 'populates agent_models from stored JSON' do
+      model_data = {
+        agent_id:   'agent_x',
+        beliefs:    { task: { content: 'coding', confidence: 0.9, source: 'direct_observation',
+                              updated_at: Time.now.utc.iso8601 } },
+        desires:    [],
+        intentions: []
+      }
+      content = JSON.dump(model_data)
+      allow(mock_store).to receive(:query).and_return(
+        { success: true, results: [{ content: content, tags: '["theory_of_mind","agent_model","agent_x"]' }] }
+      )
+      tracker.from_apollo(store: mock_store)
+      expect(tracker.agent_models['agent_x']).not_to be_nil
+    end
+  end
+
+  describe '#mark_clean!' do
+    it 'returns self' do
+      expect(tracker.mark_clean!).to eq(tracker)
+    end
+
+    it 'resets dirty flag' do
+      tracker.update_belief(agent_id: :a1, domain: :test, content: 'v', confidence: 0.8)
+      tracker.mark_clean!
+      expect(tracker.dirty?).to be false
+    end
+  end
+
+  describe '#pending_prediction' do
+    it 'returns nil when no predictions for agent' do
+      expect(tracker.pending_prediction(agent_id: :unknown)).to be_nil
+    end
+
+    it 'returns the most recent prediction entry' do
+      tracker.update_desire(agent_id: :a1, goal: 'help', priority: :high)
+      tracker.infer_intention(agent_id: :a1, action: :respond, confidence: :likely)
+      tracker.predict_behavior(agent_id: :a1, context: {})
+      result = tracker.pending_prediction(agent_id: :a1)
+      expect(result).to be_a(Hash)
+      expect(result[:agent_id]).to eq(:a1)
+    end
+
+    it 'returns the most recent of multiple predictions' do
+      tracker.update_desire(agent_id: :a1, goal: 'help', priority: :high)
+      tracker.infer_intention(agent_id: :a1, action: :respond, confidence: :likely)
+      2.times { tracker.predict_behavior(agent_id: :a1, context: {}) }
+      result = tracker.pending_prediction(agent_id: :a1)
+      expect(result[:predicted_at]).to eq(tracker.prediction_log.last[:predicted_at])
+    end
+  end
 end

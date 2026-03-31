@@ -216,5 +216,77 @@ RSpec.describe Legion::Extensions::Agentic::Social::Social::Runners::Social do
       host.update_social(tick_results: tick)
       expect(graph.group_cohesion(:alpha)).to eq(initial_cohesion)
     end
+
+    it 'returns :reputation_updates key' do
+      result = host.update_social(tick_results: {})
+      expect(result).to have_key(:reputation_updates)
+      expect(result[:reputation_updates]).to be_an(Array)
+    end
+
+    it 'processes human_observations and creates agent reputation entries' do
+      obs = [
+        {
+          identity:       'esity',
+          bond_role:      :partner,
+          channel:        :cli,
+          content_type:   :text,
+          content_length: 50,
+          direct_address: false,
+          timestamp:      Time.now.utc
+        }
+      ]
+      host.update_social(tick_results: {}, human_observations: obs)
+      expect(graph.agents_tracked).to be >= 1
+      expect(graph.reputation_scores['esity']).not_to be_nil
+    end
+
+    it 'gives partner observations higher initial confidence than strangers' do
+      partner_obs = [
+        { identity: 'partner_agent', bond_role: :partner, channel: :cli,
+          content_type: :text, content_length: 10, direct_address: false, timestamp: Time.now.utc }
+      ]
+      stranger_obs = [
+        { identity: 'stranger_agent', bond_role: :unknown, channel: :cli,
+          content_type: :text, content_length: 10, direct_address: false, timestamp: Time.now.utc }
+      ]
+
+      graph2 = Legion::Extensions::Agentic::Social::Social::Helpers::SocialGraph.new
+      host2 = Object.new.tap do |obj|
+        obj.extend(described_class)
+        obj.instance_variable_set(:@social_graph, graph2)
+      end
+
+      host.update_social(tick_results: {}, human_observations: partner_obs)
+      host2.update_social(tick_results: {}, human_observations: stranger_obs)
+
+      partner_score = graph.reputation_scores['partner_agent']
+      stranger_score = graph2.reputation_scores['stranger_agent']
+
+      partner_composite = partner_score.values.sum / partner_score.size.to_f
+      stranger_composite = stranger_score.values.sum / stranger_score.size.to_f
+
+      expect(partner_composite).to be > stranger_composite
+    end
+
+    it 'records communication reciprocity for each observation' do
+      obs = [
+        { identity: 'alice', bond_role: :known, channel: :cli,
+          content_type: :text, content_length: 20, direct_address: true, timestamp: Time.now.utc }
+      ]
+      host.update_social(tick_results: {}, human_observations: obs)
+      balance = graph.reciprocity_balance('alice')
+      expect(balance[:received]).to eq(1)
+    end
+
+    it 'reputation_updates in result includes entries for processed observations' do
+      obs = [
+        { identity: 'bob', bond_role: :partner, channel: :cli,
+          content_type: :text, content_length: 30, direct_address: false, timestamp: Time.now.utc }
+      ]
+      result = host.update_social(tick_results: {}, human_observations: obs)
+      expect(result[:reputation_updates]).not_to be_empty
+      entry = result[:reputation_updates].first
+      expect(entry[:agent_id]).to eq('bob')
+    end
   end
 end

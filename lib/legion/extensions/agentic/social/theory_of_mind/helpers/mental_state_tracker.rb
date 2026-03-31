@@ -12,6 +12,40 @@ module Legion
               def initialize
                 @agent_models = {}
                 @prediction_log = []
+                @dirty = false
+              end
+
+              def dirty?
+                @dirty
+              end
+
+              def mark_clean!
+                @dirty = false
+                self
+              end
+
+              def to_apollo_entries
+                @agent_models.map do |agent_id, model|
+                  tags = build_apollo_tags(agent_id)
+                  content = Legion::JSON.dump({
+                                                agent_id:   agent_id.to_s,
+                                                beliefs:    serialize_beliefs(model.beliefs),
+                                                desires:    model.desires,
+                                                intentions: model.intentions
+                                              })
+                  { content: content, tags: tags }
+                end
+              end
+
+              def from_apollo(store:)
+                result = store.query(text: 'theory_of_mind agent_model', tags: %w[theory_of_mind agent_model])
+                return false unless result[:success] && result[:results]&.any?
+
+                result[:results].each { |entry| restore_from_entry(entry) }
+                true
+              rescue StandardError => e
+                Legion::Logging.warn("[mental_state_tracker] from_apollo error: #{e.message}")
+                false
               end
 
               def model_for(agent_id)
@@ -23,16 +57,19 @@ module Legion
               def update_belief(agent_id:, domain:, content:, confidence:, source: :inference)
                 model = model_for(agent_id)
                 model.update_belief(domain: domain, content: content, confidence: confidence, source: source)
+                @dirty = true
               end
 
               def update_desire(agent_id:, goal:, priority: :medium)
                 model = model_for(agent_id)
                 model.update_desire(goal: goal, priority: priority)
+                @dirty = true
               end
 
               def infer_intention(agent_id:, action:, confidence: :possible)
                 model = model_for(agent_id)
                 model.update_intention(action: action, confidence: confidence)
+                @dirty = true
               end
 
               def predict_behavior(agent_id:, context: {})
@@ -89,6 +126,10 @@ module Legion
                   conflicting_goals: find_conflicting_goals(models),
                   interaction_gap:   interaction_gap(models)
                 }
+              end
+
+              def pending_prediction(agent_id:)
+                @prediction_log.reverse.find { |p| p[:agent_id] == agent_id }
               end
 
               def decay_all
@@ -159,6 +200,68 @@ module Legion
 
               def trim_prediction_log
                 @prediction_log.shift while @prediction_log.size > 200
+              end
+
+              def build_apollo_tags(agent_id)
+                tags = ['theory_of_mind', 'agent_model', agent_id.to_s]
+                tags << 'partner' if defined?(Legion::Gaia::BondRegistry) && partner_agent?(agent_id)
+                tags
+              end
+
+              def partner_agent?(agent_id)
+                Legion::Gaia::BondRegistry.partner?(agent_id.to_s)
+              rescue StandardError => e
+                Legion::Logging.debug("[mental_state_tracker] BondRegistry check failed: #{e.message}")
+                false
+              end
+
+              def serialize_beliefs(beliefs)
+                beliefs.transform_keys(&:to_s).transform_values do |b|
+                  b.merge(updated_at: b[:updated_at]&.iso8601)
+                end
+              end
+
+              def restore_from_entry(entry)
+                data = Legion::JSON.parse(entry[:content])
+                agent_id = data['agent_id'] || data[:agent_id]
+                return unless agent_id
+
+                model = model_for(agent_id)
+                restore_beliefs(model, data['beliefs'] || {})
+                restore_desires(model, data['desires'] || [])
+                restore_intentions(model, data['intentions'] || [])
+              rescue StandardError => e
+                Legion::Logging.debug("[mental_state_tracker] restore entry failed: #{e.message}")
+                nil
+              end
+
+              def restore_beliefs(model, beliefs_data)
+                beliefs_data.each do |domain, belief|
+                  model.update_belief(
+                    domain:     domain.to_sym,
+                    content:    belief['content'],
+                    confidence: belief['confidence'].to_f,
+                    source:     (belief['source'] || :restored).to_sym
+                  )
+                end
+              end
+
+              def restore_desires(model, desires_data)
+                desires_data.each do |desire|
+                  model.update_desire(
+                    goal:     desire['goal'],
+                    priority: (desire['priority'] || :medium).to_sym
+                  )
+                end
+              end
+
+              def restore_intentions(model, intentions_data)
+                intentions_data.each do |intention|
+                  model.update_intention(
+                    action:     intention['action'].to_sym,
+                    confidence: (intention['confidence'] || :possible).to_sym
+                  )
+                end
               end
             end
           end

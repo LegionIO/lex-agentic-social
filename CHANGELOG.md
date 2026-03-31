@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.6] - 2026-03-31
+
+### Added
+- `update_social` accepts `human_observations:` kwarg; processes each observation into reputation signals (partner: 0.8 confidence, others: 0.5) and records communication reciprocity
+- `SocialGraph#reputation_changes` array tracks dimension-level changes per update cycle; cleared at start of each `update_social` call
+- `update_social` return hash includes `:reputation_updates` key with agent-level summary
+- `update_theory_of_mind` accepts `human_observations:` kwarg; builds communication and channel-preference beliefs, infers engagement intent from direct-address observations, validates pending predictions
+- `MentalStateTracker#pending_prediction(agent_id:)` returns most recent unvalidated prediction log entry
+- Dirty tracking (`dirty?`, `mark_clean!`) on `SocialGraph` and `MentalStateTracker`
+- Apollo Local persistence (`to_apollo_entries`, `from_apollo`, `mark_clean!`) on `SocialGraph` and `MentalStateTracker`; partner agents tagged with `'partner'` when `Legion::Gaia::BondRegistry` is present
+
 ## [0.1.5] - 2026-03-30
 
 ### Changed

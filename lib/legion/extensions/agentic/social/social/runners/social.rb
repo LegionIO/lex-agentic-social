@@ -10,17 +10,20 @@ module Legion
               include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
                                                           Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
-              def update_social(tick_results: {}, **)
+              def update_social(tick_results: {}, human_observations: [], **)
+                social_graph.clear_reputation_changes!
                 extract_social_signals(tick_results)
+                process_human_observations(human_observations)
 
                 log.debug "[social] groups=#{social_graph.group_count} " \
                           "agents=#{social_graph.agents_tracked} standing=#{social_graph.social_standing}"
 
                 {
-                  groups:         social_graph.group_count,
-                  agents_tracked: social_graph.agents_tracked,
-                  standing:       social_graph.social_standing,
-                  ledger_size:    social_graph.reciprocity_ledger.size
+                  groups:             social_graph.group_count,
+                  agents_tracked:     social_graph.agents_tracked,
+                  standing:           social_graph.social_standing,
+                  ledger_size:        social_graph.reciprocity_ledger.size,
+                  reputation_updates: build_reputation_updates
                 }
               end
 
@@ -109,6 +112,38 @@ module Legion
 
               def social_graph
                 @social_graph ||= Helpers::SocialGraph.new
+              end
+
+              def process_human_observations(human_observations)
+                human_observations.each do |obs|
+                  agent_id   = obs[:identity].to_s
+                  confidence = obs[:bond_role] == :partner ? 0.8 : 0.5
+
+                  social_graph.update_reputation(
+                    agent_id:  agent_id,
+                    dimension: :reliability,
+                    signal:    confidence
+                  )
+                  social_graph.record_reciprocity(
+                    agent_id:  agent_id,
+                    action:    obs[:content_type] || :text,
+                    direction: :received
+                  )
+                end
+              end
+
+              def build_reputation_updates
+                social_graph.reputation_changes
+                            .group_by { |c| c[:agent_id] }
+                            .map do |agent_id, changes|
+                  rep = social_graph.reputation_for(agent_id)
+                  {
+                    agent_id:  agent_id,
+                    changes:   changes,
+                    composite: rep&.dig(:composite),
+                    standing:  rep&.dig(:standing)
+                  }
+                end
               end
 
               def extract_social_signals(tick_results)
