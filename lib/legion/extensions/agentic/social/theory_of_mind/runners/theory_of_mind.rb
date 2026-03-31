@@ -10,9 +10,10 @@ module Legion
               include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
                                                           Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
-              def update_theory_of_mind(tick_results: {}, **)
+              def update_theory_of_mind(tick_results: {}, human_observations: [], **)
                 extract_social_observations(tick_results)
                 extract_mesh_observations(tick_results)
+                process_tom_human_observations(human_observations)
                 tracker.decay_all
 
                 log.debug "[tom] agents=#{tracker.agents_tracked} " \
@@ -119,6 +120,51 @@ module Legion
                 return unless obs[:action]
 
                 tracker.infer_intention(agent_id: agent_id, action: obs[:action], confidence: obs[:action_confidence] || :possible)
+              end
+
+              def process_tom_human_observations(human_observations)
+                human_observations.each do |obs|
+                  agent_id = obs[:identity].to_s
+                  validate_pending_prediction(agent_id)
+                  build_communication_belief(agent_id, obs)
+                  infer_engagement_intention(agent_id, obs) if obs[:direct_address]
+                  infer_channel_preference(agent_id, obs)
+                end
+              end
+
+              def validate_pending_prediction(agent_id)
+                pending = tracker.pending_prediction(agent_id: agent_id)
+                return unless pending
+
+                tracker.record_prediction_outcome(agent_id: agent_id, outcome: :correct)
+              end
+
+              def build_communication_belief(agent_id, obs)
+                channel = obs[:channel] || :unknown
+                tracker.update_belief(
+                  agent_id:   agent_id,
+                  domain:     :communication,
+                  content:    channel,
+                  confidence: 0.7,
+                  source:     :direct_observation
+                )
+              end
+
+              def infer_engagement_intention(agent_id, obs)
+                confidence = obs[:bond_role] == :partner ? :certain : :likely
+                tracker.infer_intention(agent_id: agent_id, action: :engage, confidence: confidence)
+              end
+
+              def infer_channel_preference(agent_id, obs)
+                return unless obs[:channel]
+
+                tracker.update_belief(
+                  agent_id:   agent_id,
+                  domain:     :channel_preference,
+                  content:    obs[:channel],
+                  confidence: 0.6,
+                  source:     :direct_observation
+                )
               end
 
               def extract_social_observations(tick_results)

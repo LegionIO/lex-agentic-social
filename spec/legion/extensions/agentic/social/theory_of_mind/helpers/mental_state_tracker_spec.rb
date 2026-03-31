@@ -225,4 +225,27 @@ RSpec.describe Legion::Extensions::Agentic::Social::TheoryOfMind::Helpers::Menta
       expect(result).to have_key(:prediction_log_size)
     end
   end
+
+  describe '#pending_prediction' do
+    it 'returns nil when no predictions for agent' do
+      expect(tracker.pending_prediction(agent_id: :unknown)).to be_nil
+    end
+
+    it 'returns the most recent prediction entry' do
+      tracker.update_desire(agent_id: :a1, goal: 'help', priority: :high)
+      tracker.infer_intention(agent_id: :a1, action: :respond, confidence: :likely)
+      tracker.predict_behavior(agent_id: :a1, context: {})
+      result = tracker.pending_prediction(agent_id: :a1)
+      expect(result).to be_a(Hash)
+      expect(result[:agent_id]).to eq(:a1)
+    end
+
+    it 'returns the most recent of multiple predictions' do
+      tracker.update_desire(agent_id: :a1, goal: 'help', priority: :high)
+      tracker.infer_intention(agent_id: :a1, action: :respond, confidence: :likely)
+      2.times { tracker.predict_behavior(agent_id: :a1, context: {}) }
+      result = tracker.pending_prediction(agent_id: :a1)
+      expect(result[:predicted_at]).to eq(tracker.prediction_log.last[:predicted_at])
+    end
+  end
 end

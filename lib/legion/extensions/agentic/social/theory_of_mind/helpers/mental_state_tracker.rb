@@ -91,6 +91,10 @@ module Legion
                 }
               end
 
+              def pending_prediction(agent_id:)
+                @prediction_log.reverse.find { |p| p[:agent_id] == agent_id }
+              end
+
               def decay_all
                 @agent_models.each_value(&:decay_beliefs)
                 @agent_models.reject! { |_, m| m.beliefs.empty? && m.desires.empty? && m.intentions.empty? }

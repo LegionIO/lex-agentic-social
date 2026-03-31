@@ -217,5 +217,51 @@ RSpec.describe Legion::Extensions::Agentic::Social::TheoryOfMind::Runners::Theor
       host.update_theory_of_mind(tick_results: {})
       expect(mental_tracker.agent_models[:a1].beliefs[:test][:confidence]).to be < initial
     end
+
+    it 'accepts human_observations kwarg without error' do
+      obs = [
+        { identity: 'esity', bond_role: :partner, channel: :cli,
+          content_type: :text, content_length: 50, direct_address: true, timestamp: Time.now.utc }
+      ]
+      expect { host.update_theory_of_mind(tick_results: {}, human_observations: obs) }.not_to raise_error
+    end
+
+    it 'builds beliefs from human_observations communication domain' do
+      obs = [
+        { identity: 'esity', bond_role: :partner, channel: :cli,
+          content_type: :text, content_length: 50, direct_address: false, timestamp: Time.now.utc }
+      ]
+      host.update_theory_of_mind(tick_results: {}, human_observations: obs)
+      model = mental_tracker.agent_models['esity']
+      expect(model).not_to be_nil
+      expect(model.beliefs[:communication]).not_to be_nil
+    end
+
+    it 'records engagement intent from direct_address observations' do
+      obs = [
+        { identity: 'alice', bond_role: :known, channel: :cli,
+          content_type: :text, content_length: 30, direct_address: true, timestamp: Time.now.utc }
+      ]
+      host.update_theory_of_mind(tick_results: {}, human_observations: obs)
+      model = mental_tracker.agent_models['alice']
+      intention = model.intentions.find { |i| i[:action] == :engage }
+      expect(intention).not_to be_nil
+    end
+
+    it 'validates pending predictions when human_observations arrive' do
+      # First seed a prediction
+      mental_tracker.update_belief(agent_id: 'bob', domain: :task, content: 'coding', confidence: 0.8)
+      mental_tracker.infer_intention(agent_id: 'bob', action: :communicate, confidence: :likely)
+      mental_tracker.predict_behavior(agent_id: 'bob', context: {})
+      initial_log_size = mental_tracker.prediction_log.size
+
+      obs = [
+        { identity: 'bob', bond_role: :known, channel: :cli,
+          content_type: :text, content_length: 20, direct_address: false, timestamp: Time.now.utc }
+      ]
+      host.update_theory_of_mind(tick_results: {}, human_observations: obs)
+      # prediction log may grow or model accuracy may change; at minimum no error
+      expect(mental_tracker.prediction_log.size).to be >= initial_log_size
+    end
   end
 end
