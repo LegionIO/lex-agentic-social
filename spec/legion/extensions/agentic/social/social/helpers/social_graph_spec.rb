@@ -319,4 +319,26 @@ RSpec.describe Legion::Extensions::Agentic::Social::Social::Helpers::SocialGraph
       expect(result).to have_key(:ledger_size)
     end
   end
+
+  describe '#reputation_changes' do
+    it 'starts empty' do
+      expect(graph.reputation_changes).to eq([])
+    end
+
+    it 'records a change when reputation is updated' do
+      graph.update_reputation(agent_id: :a1, dimension: :reliability, signal: 0.8)
+      expect(graph.reputation_changes).not_to be_empty
+    end
+
+    it 'records agent_id in the change entry' do
+      graph.update_reputation(agent_id: :a1, dimension: :reliability, signal: 0.8)
+      expect(graph.reputation_changes.first[:agent_id]).to eq(:a1)
+    end
+
+    it 'clears reputation_changes on clear_reputation_changes!' do
+      graph.update_reputation(agent_id: :a1, dimension: :reliability, signal: 0.8)
+      graph.clear_reputation_changes!
+      expect(graph.reputation_changes).to be_empty
+    end
+  end
 end

@@ -7,12 +7,17 @@ module Legion
         module Social
           module Helpers
             class SocialGraph
-              attr_reader :groups, :reputation_scores, :reciprocity_ledger
+              attr_reader :groups, :reputation_scores, :reciprocity_ledger, :reputation_changes
 
               def initialize
                 @groups = {}
                 @reputation_scores = {}
                 @reciprocity_ledger = []
+                @reputation_changes = []
+              end
+
+              def clear_reputation_changes!
+                @reputation_changes = []
               end
 
               def join_group(group_id:, role: :contributor, members: [])
@@ -44,7 +49,10 @@ module Legion
 
                 @reputation_scores[agent_id] ||= Constants::REPUTATION_DIMENSIONS.keys.to_h { |d| [d, 0.5] }
                 current = @reputation_scores[agent_id][dimension]
-                @reputation_scores[agent_id][dimension] = ema(current, signal.clamp(0.0, 1.0), Constants::REPUTATION_ALPHA)
+                new_score = ema(current, signal.clamp(0.0, 1.0), Constants::REPUTATION_ALPHA)
+                @reputation_scores[agent_id][dimension] = new_score
+                @reputation_changes << { agent_id: agent_id, dimension: dimension, score: new_score }
+                new_score
               end
 
               def reputation_for(agent_id)
