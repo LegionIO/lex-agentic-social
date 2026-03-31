@@ -36,11 +36,11 @@ RSpec.describe Legion::Extensions::Agentic::Social::Attachment::Helpers::Attachm
   describe '#update_from_signals' do
     let(:signals) do
       {
-        frequency_score: 0.6,
-        reciprocity_score: 0.5,
-        prediction_accuracy: 0.7,
+        frequency_score:      0.6,
+        reciprocity_score:    0.5,
+        prediction_accuracy:  0.7,
         direct_address_ratio: 0.4,
-        channel_consistency: 0.8
+        channel_consistency:  0.8
       }
     end
 

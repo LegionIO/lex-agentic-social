@@ -69,13 +69,13 @@ module Legion
               end
 
               def serialize(hash)
-                defined?(Legion::JSON) ? Legion::JSON.dump(hash) : JSON.dump(hash)
+                defined?(Legion::JSON) ? Legion::JSON.dump(hash) : ::JSON.dump(hash)
               end
 
               def deserialize(content)
-                parsed = defined?(Legion::JSON) ? Legion::JSON.parse(content) : JSON.parse(content, symbolize_names: true)
+                parsed = defined?(Legion::JSON) ? Legion::JSON.parse(content) : ::JSON.parse(content, symbolize_names: true)
                 parsed.transform_keys(&:to_sym)
-              rescue StandardError
+              rescue StandardError => _e
                 nil
               end
             end

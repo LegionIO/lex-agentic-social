@@ -38,10 +38,10 @@ module Legion
 
               # Style derivation thresholds
               STYLE_THRESHOLDS = {
-                anxious_frequency_variance: 0.4,
+                anxious_frequency_variance:    0.4,
                 anxious_reciprocity_imbalance: 0.3,
-                avoidant_frequency: 0.2,
-                avoidant_direct_address: 0.15
+                avoidant_frequency:            0.2,
+                avoidant_direct_address:       0.15
               }.freeze
 
               # Apollo Local tag prefix

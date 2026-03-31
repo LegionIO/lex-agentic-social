@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.8] - 2026-03-31
+
+### Added
+- Attachment sub-module for Phase C bond modeling
+- `AttachmentModel`: per-agent attachment strength, style, and stage tracking with EMA updates and no-regression stage transitions
+- `AttachmentStore`: in-memory store with dirty tracking and Apollo Local persistence (`to_apollo_entries`, `from_apollo`)
+- `Attachment` runner: `update_attachment` (tick integration), `reflect_on_bonds` (dream cycle orchestrator reading cross-module bond data), `attachment_stats`
+
 ## [0.1.7] - 2026-03-31
 
 ### Changed

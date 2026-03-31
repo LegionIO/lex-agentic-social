@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'set'
-
 module Legion
   module Extensions
     module Agentic
@@ -27,7 +25,7 @@ module Legion
                 { agents_updated: agents.size, models: agents.map { |id| attachment_store.get(id)&.to_h } }
               end
 
-              def reflect_on_bonds(tick_results: {}, bond_summary: {}, **)
+              def reflect_on_bonds(_tick_results: {}, _bond_summary: {}, **)
                 store = apollo_local_store
                 return { success: false, error: :no_store } unless store
 
@@ -39,14 +37,16 @@ module Legion
 
                 {
                   bonds_reflected: attachment_store.all_models.size,
-                  partner_bond: model ? {
-                    stage: model.bond_stage,
-                    strength: model.attachment_strength,
-                    style: model.attachment_style,
-                    health: health,
-                    milestones_today: arc_state[:milestones_today] || [],
-                    narrative: nil
-                  } : nil
+                  partner_bond:    if model
+                                     {
+                                       stage:            model.bond_stage,
+                                       strength:         model.attachment_strength,
+                                       style:            model.attachment_style,
+                                       health:           health,
+                                       milestones_today: arc_state[:milestones_today] || [],
+                                       narrative:        nil
+                                     }
+                                   end
                 }
               rescue StandardError => e
                 { success: false, error: e.message }
@@ -57,7 +57,7 @@ module Legion
                 partner_model = attachment_store.get(partner_id) if partner_id
                 {
                   bonds_tracked: attachment_store.all_models.size,
-                  partner_bond: partner_model&.to_h
+                  partner_bond:  partner_model&.to_h
                 }
               end
 
@@ -78,19 +78,19 @@ module Legion
 
               def extract_signals(agent_id, tick_results, human_observations)
                 reputation = (tick_results.dig(:social_cognition, :reputation_updates) || [])
-                               .find { |u| u[:agent_id].to_s == agent_id }
+                             .find { |u| u[:agent_id].to_s == agent_id }
                 prediction = tick_results.dig(:theory_of_mind, :prediction_accuracy) || {}
                 obs = human_observations.select { |o| o[:agent_id].to_s == agent_id }
 
                 direct_count = obs.count { |o| o[:direct_address] }
-                channels = obs.map { |o| o[:channel] }.compact.uniq
+                channels = obs.filter_map { |o| o[:channel] }.uniq
 
                 {
-                  frequency_score: obs.size.clamp(0, 10) / 10.0,
-                  reciprocity_score: (reputation&.dig(:composite) || 0.0).clamp(0.0, 1.0),
-                  prediction_accuracy: (prediction[agent_id] || 0.0).clamp(0.0, 1.0),
+                  frequency_score:      obs.size.clamp(0, 10) / 10.0,
+                  reciprocity_score:    (reputation&.dig(:composite) || 0.0).clamp(0.0, 1.0),
+                  prediction_accuracy:  (prediction[agent_id] || 0.0).clamp(0.0, 1.0),
                   direct_address_ratio: obs.empty? ? 0.0 : (direct_count.to_f / obs.size).clamp(0.0, 1.0),
-                  channel_consistency: channels.size <= 1 ? 1.0 : (1.0 / channels.size).clamp(0.0, 1.0)
+                  channel_consistency:  channels.size <= 1 ? 1.0 : (1.0 / channels.size).clamp(0.0, 1.0)
                 }
               end
 
@@ -98,10 +98,10 @@ module Legion
                 obs = human_observations.select { |o| o[:agent_id].to_s == agent_id }
                 direct_count = obs.count { |o| o[:direct_address] }
                 {
-                  frequency_variance: 0.0,
+                  frequency_variance:    0.0,
                   reciprocity_imbalance: 0.0,
-                  frequency: obs.size.clamp(0, 10) / 10.0,
-                  direct_address_ratio: obs.empty? ? 0.0 : direct_count.to_f / obs.size
+                  frequency:             obs.size.clamp(0, 10) / 10.0,
+                  direct_address_ratio:  obs.empty? ? 0.0 : direct_count.to_f / obs.size
                 }
               end
 
@@ -129,7 +129,7 @@ module Legion
                 return {} unless result[:success] && result[:results]&.any?
 
                 deserialize(result[:results].first[:content]) || {}
-              rescue StandardError
+              rescue StandardError => _e
                 {}
               end
 
@@ -141,7 +141,7 @@ module Legion
                 return {} unless result[:success] && result[:results]&.any?
 
                 deserialize(result[:results].first[:content]) || {}
-              rescue StandardError
+              rescue StandardError => _e
                 {}
               end
 
@@ -155,9 +155,9 @@ module Legion
               end
 
               def deserialize(content)
-                parsed = defined?(Legion::JSON) ? Legion::JSON.parse(content) : JSON.parse(content, symbolize_names: true)
+                parsed = defined?(Legion::JSON) ? Legion::JSON.parse(content) : ::JSON.parse(content, symbolize_names: true)
                 parsed.is_a?(Hash) ? parsed.transform_keys(&:to_sym) : {}
-              rescue StandardError
+              rescue StandardError => _e
                 {}
               end
             end

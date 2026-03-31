@@ -4,7 +4,11 @@ module Legion
   module Extensions
     module Agentic
       module Social
-        VERSION = '0.1.8'
+        module Attachment
+          class Client
+            include Runners::Attachment
+          end
+        end
       end
     end
   end

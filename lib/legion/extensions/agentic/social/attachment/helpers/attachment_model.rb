@@ -79,7 +79,7 @@ module Legion
                 model.instance_variable_set(:@attachment_style, hash[:attachment_style]&.to_sym || :secure)
                 model.instance_variable_set(:@bond_stage, hash[:bond_stage]&.to_sym || :initial)
                 model.instance_variable_set(:@separation_tolerance, hash[:separation_tolerance]&.to_i || 3)
-                model.instance_variable_set(:@interaction_count, hash[:interaction_count]&.to_i || 0)
+                model.instance_variable_set(:@interaction_count, hash[:interaction_count].to_i)
                 model
               end
 

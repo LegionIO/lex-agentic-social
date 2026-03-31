@@ -18,6 +18,7 @@ require_relative 'social/moral_reasoning'
 require_relative 'social/governance'
 require_relative 'social/joint_attention'
 require_relative 'social/mirror_system'
+require_relative 'social/attachment'
 
 module Legion
   module Extensions

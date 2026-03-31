@@ -18,12 +18,12 @@ RSpec.describe Legion::Extensions::Agentic::Social::Attachment::Runners::Attachm
     let(:tick_results) do
       {
         social_cognition: {
-          reputation_updates: [
+          reputation_updates:      [
             { agent_id: 'partner-1', composite: 0.6 }
           ],
           reciprocity_ledger_size: 10
         },
-        theory_of_mind: {
+        theory_of_mind:   {
           prediction_accuracy: { 'partner-1' => 0.7 }
         }
       }
