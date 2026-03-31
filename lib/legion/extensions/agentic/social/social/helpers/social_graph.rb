@@ -14,10 +14,43 @@ module Legion
                 @reputation_scores = {}
                 @reciprocity_ledger = []
                 @reputation_changes = []
+                @dirty = false
+              end
+
+              def dirty?
+                @dirty
+              end
+
+              def mark_clean!
+                @dirty = false
+                self
               end
 
               def clear_reputation_changes!
                 @reputation_changes = []
+              end
+
+              def to_apollo_entries
+                @reputation_scores.map do |agent_id, scores|
+                  tags = build_apollo_tags(agent_id)
+                  content = Legion::JSON.dump({
+                                                agent_id:   agent_id.to_s,
+                                                scores:     scores,
+                                                updated_at: Time.now.utc.iso8601
+                                              })
+                  { content: content, tags: tags }
+                end
+              end
+
+              def from_apollo(store:)
+                result = store.query(text: 'social_graph reputation', tags: %w[social_graph reputation])
+                return false unless result[:success] && result[:results]&.any?
+
+                result[:results].each { |entry| restore_from_entry(entry) }
+                true
+              rescue StandardError => e
+                Legion::Logging.warn("[social_graph] from_apollo error: #{e.message}")
+                false
               end
 
               def join_group(group_id:, role: :contributor, members: [])
@@ -30,6 +63,7 @@ module Legion
                   violations: []
                 }
                 trim_groups
+                @dirty = true
                 @groups[group_id]
               end
 
@@ -52,6 +86,7 @@ module Legion
                 new_score = ema(current, signal.clamp(0.0, 1.0), Constants::REPUTATION_ALPHA)
                 @reputation_scores[agent_id][dimension] = new_score
                 @reputation_changes << { agent_id: agent_id, dimension: dimension, score: new_score }
+                @dirty = true
                 new_score
               end
 
@@ -88,6 +123,7 @@ module Legion
                   at:        Time.now.utc
                 }
                 @reciprocity_ledger.shift while @reciprocity_ledger.size > Constants::RECIPROCITY_WINDOW
+                @dirty = true
               end
 
               def reciprocity_balance(agent_id)
@@ -170,6 +206,35 @@ module Legion
               def trim_groups
                 oldest = @groups.keys.sort_by { |k| @groups[k][:joined_at] }
                 oldest.first([@groups.size - Constants::MAX_GROUPS, 0].max).each { |k| @groups.delete(k) }
+              end
+
+              def build_apollo_tags(agent_id)
+                tags = ['social_graph', 'reputation', agent_id.to_s]
+                tags << 'partner' if defined?(Legion::Gaia::BondRegistry) && partner_agent?(agent_id)
+                tags
+              end
+
+              def partner_agent?(agent_id)
+                Legion::Gaia::BondRegistry.partner?(agent_id.to_s)
+              rescue StandardError => e
+                Legion::Logging.debug("[social_graph] BondRegistry check failed: #{e.message}")
+                false
+              end
+
+              def restore_from_entry(entry)
+                data = Legion::JSON.parse(entry[:content])
+                agent_id = data['agent_id'] || data[:agent_id]
+                return unless agent_id
+
+                scores = data['scores'] || data[:scores] || {}
+                stored = scores.transform_keys(&:to_sym)
+                @reputation_scores[agent_id] ||= Constants::REPUTATION_DIMENSIONS.keys.to_h { |d| [d, 0.5] }
+                stored.each do |dim, val|
+                  @reputation_scores[agent_id][dim] = val.to_f if Constants::REPUTATION_DIMENSIONS.key?(dim)
+                end
+              rescue StandardError => e
+                Legion::Logging.debug("[social_graph] restore entry failed: #{e.message}")
+                nil
               end
             end
           end

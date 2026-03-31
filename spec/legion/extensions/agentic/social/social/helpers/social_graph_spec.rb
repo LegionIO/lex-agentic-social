@@ -320,6 +320,94 @@ RSpec.describe Legion::Extensions::Agentic::Social::Social::Helpers::SocialGraph
     end
   end
 
+  describe '#dirty?' do
+    it 'starts clean' do
+      expect(graph.dirty?).to be false
+    end
+
+    it 'becomes dirty after reputation update' do
+      graph.update_reputation(agent_id: :a1, dimension: :reliability, signal: 0.8)
+      expect(graph.dirty?).to be true
+    end
+
+    it 'becomes dirty after joining a group' do
+      graph.join_group(group_id: :alpha)
+      expect(graph.dirty?).to be true
+    end
+
+    it 'becomes dirty after recording reciprocity' do
+      graph.record_reciprocity(agent_id: :a1, action: :helped, direction: :given)
+      expect(graph.dirty?).to be true
+    end
+
+    it 'becomes clean after mark_clean!' do
+      graph.update_reputation(agent_id: :a1, dimension: :reliability, signal: 0.8)
+      graph.mark_clean!
+      expect(graph.dirty?).to be false
+    end
+  end
+
+  describe '#to_apollo_entries' do
+    it 'returns empty array when no reputation scores' do
+      expect(graph.to_apollo_entries).to eq([])
+    end
+
+    it 'returns one entry per tracked agent' do
+      graph.update_reputation(agent_id: :a1, dimension: :reliability, signal: 0.8)
+      graph.update_reputation(agent_id: :a2, dimension: :competence, signal: 0.7)
+      expect(graph.to_apollo_entries.size).to eq(2)
+    end
+
+    it 'entry content is a JSON string' do
+      graph.update_reputation(agent_id: :a1, dimension: :reliability, signal: 0.8)
+      entry = graph.to_apollo_entries.first
+      parsed = JSON.parse(entry[:content])
+      expect(parsed).to have_key('agent_id')
+    end
+
+    it 'entry tags include social_graph, reputation, and agent_id' do
+      graph.update_reputation(agent_id: :a1, dimension: :reliability, signal: 0.8)
+      entry = graph.to_apollo_entries.first
+      expect(entry[:tags]).to include('social_graph', 'reputation')
+      expect(entry[:tags].any? { |t| t.to_s == 'a1' }).to be true
+    end
+  end
+
+  describe '#from_apollo' do
+    let(:mock_store) do
+      double('ApolloLocal').tap do |store|
+        allow(store).to receive(:query).and_return({ success: false, results: [] })
+      end
+    end
+
+    it 'returns false when store query fails or returns no results' do
+      result = graph.from_apollo(store: mock_store)
+      expect(result).to be false
+    end
+
+    it 'populates reputation_scores from stored JSON' do
+      scores = { reliability: 0.8, competence: 0.7, benevolence: 0.5, integrity: 0.5, influence: 0.5 }
+      content = JSON.dump({ agent_id: 'a1', scores: scores, updated_at: Time.now.utc.iso8601 })
+      allow(mock_store).to receive(:query).and_return(
+        { success: true, results: [{ content: content, tags: '["social_graph","reputation","a1"]' }] }
+      )
+      graph.from_apollo(store: mock_store)
+      expect(graph.reputation_scores['a1']).not_to be_nil
+    end
+  end
+
+  describe '#mark_clean!' do
+    it 'returns self' do
+      expect(graph.mark_clean!).to eq(graph)
+    end
+
+    it 'resets dirty flag' do
+      graph.update_reputation(agent_id: :a1, dimension: :reliability, signal: 0.5)
+      graph.mark_clean!
+      expect(graph.dirty?).to be false
+    end
+  end
+
   describe '#reputation_changes' do
     it 'starts empty' do
       expect(graph.reputation_changes).to eq([])
