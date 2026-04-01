@@ -72,6 +72,73 @@ RSpec.describe Legion::Extensions::Agentic::Social::Calibration::Runners::Calibr
     end
   end
 
+  describe '#retrieve_from_memory' do
+    it 'returns empty array when lex-agentic-memory is not loaded' do
+      result = client.send(:retrieve_from_memory)
+      expect(result).to eq([])
+    end
+  end
+
+  describe '#retrieve_from_apollo_local' do
+    it 'returns empty array when Apollo Local is not available' do
+      result = client.send(:retrieve_from_apollo_local)
+      expect(result).to eq([])
+    end
+
+    it 'maps Apollo Local entries to trace-compatible hashes when available' do
+      mock_local = double('apollo_local')
+      stub_const('Legion::Apollo', Module.new)
+      stub_const('Legion::Apollo::Local', mock_local)
+      allow(mock_local).to receive(:started?).and_return(true)
+      allow(mock_local).to receive(:query_by_tags).with(tags: ['partner_interaction'], limit: 50).and_return([
+                                                                                                               {
+                                                                                                                 content:    'hello partner',
+                                                                                                                 tags:       ['partner_interaction'],
+                                                                                                                 confidence: 0.8
+                                                                                                               }
+                                                                                                             ])
+
+      result = client.send(:retrieve_from_apollo_local)
+      expect(result).to be_an(Array)
+      expect(result.size).to eq(1)
+      expect(result.first[:content]).to eq('hello partner')
+      expect(result.first[:confidence]).to eq(0.8)
+    end
+
+    it 'returns empty array and logs warning when Apollo Local raises' do
+      mock_local = double('apollo_local')
+      stub_const('Legion::Apollo', Module.new)
+      stub_const('Legion::Apollo::Local', mock_local)
+      allow(mock_local).to receive(:started?).and_return(true)
+      allow(mock_local).to receive(:query_by_tags).and_raise(StandardError, 'db error')
+      allow(Legion::Logging).to receive(:warn)
+
+      result = client.send(:retrieve_from_apollo_local)
+      expect(result).to eq([])
+      expect(Legion::Logging).to have_received(:warn).with(a_string_including('retrieve_from_apollo_local'))
+    end
+  end
+
+  describe '#retrieve_interaction_traces' do
+    it 'falls through to Apollo Local when memory returns no traces' do
+      allow(client).to receive(:retrieve_from_memory).and_return([])
+      allow(client).to receive(:retrieve_from_apollo_local).and_return([{ content: 'trace', tags: [], confidence: 0.5 }])
+
+      result = client.send(:retrieve_interaction_traces)
+      expect(result).not_to be_empty
+      expect(result.first[:content]).to eq('trace')
+    end
+
+    it 'returns memory traces directly without calling Apollo Local when memory has results' do
+      memory_trace = { content: 'memory trace', tags: ['partner_interaction'], recorded_at: Time.now }
+      allow(client).to receive(:retrieve_from_memory).and_return([memory_trace])
+      expect(client).not_to receive(:retrieve_from_apollo_local)
+
+      result = client.send(:retrieve_interaction_traces)
+      expect(result).to eq([memory_trace])
+    end
+  end
+
   describe '#promote_partner_knowledge' do
     it 'skips when Apollo Local unavailable' do
       result = client.promote_partner_knowledge

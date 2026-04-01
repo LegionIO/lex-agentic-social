@@ -25,7 +25,10 @@ module Legion
               end
 
               def check_airb_compliance(**)
-                return { checked: 0, source: :unavailable } unless defined?(Legion::Data::Model::DigitalWorker)
+                unless defined?(Legion::Data::Model::DigitalWorker)
+                  Legion::Logging.debug('[governance:shadow_ai] AIRB compliance check unavailable — DigitalWorker model not loaded')
+                  return { checked: 0, source: :unavailable, reason: 'DigitalWorker model not loaded' }
+                end
 
                 workers = Legion::Data::Model::DigitalWorker.where(lifecycle_state: 'active').all
                 non_compliant = workers.select do |w|
