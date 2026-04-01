@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.9] - 2026-03-31
+
+### Added
+- Calibration sub-module: CalibrationStore with EMA tracking, explicit feedback detection, partner baseline tracking
+- CalibrationRunner: update_calibration, record_advisory_meta, detect_explicit_feedback, calibration_weights, calibration_stats
+- sync_partner_knowledge: LLM preference extraction (weekly) + partner knowledge promotion to Apollo Global
+- Apollo Local persistence via dirty?/to_apollo_entries/from_apollo pattern
+
 ## [0.1.8] - 2026-03-31
 
 ### Added
