@@ -19,6 +19,7 @@ require_relative 'social/governance'
 require_relative 'social/joint_attention'
 require_relative 'social/mirror_system'
 require_relative 'social/attachment'
+require_relative 'social/calibration'
 
 module Legion
   module Extensions
