@@ -39,12 +39,13 @@ module Legion
                   bonds_reflected: attachment_store.all_models.size,
                   partner_bond:    if model
                                      {
-                                       stage:            model.bond_stage,
-                                       strength:         model.attachment_strength,
-                                       style:            model.attachment_style,
-                                       health:           health,
-                                       milestones_today: arc_state[:milestones_today] || [],
-                                       narrative:        nil
+                                       stage:                   model.bond_stage,
+                                       strength:                model.attachment_strength,
+                                       style:                   model.attachment_style,
+                                       health:                  health,
+                                       milestones_today:        arc_state[:milestones_today] || [],
+                                       narrative:               build_narrative(model, health, arc_state),
+                                       absence_exceeds_pattern: absence_exceeds_pattern?(partner_id)
                                      }
                                    end
                 }
@@ -98,11 +99,35 @@ module Legion
                 obs = human_observations.select { |o| o[:agent_id].to_s == agent_id }
                 direct_count = obs.count { |o| o[:direct_address] }
                 {
-                  frequency_variance:    0.0,
-                  reciprocity_imbalance: 0.0,
+                  frequency_variance:    compute_frequency_variance(obs),
+                  reciprocity_imbalance: compute_reciprocity_imbalance(obs),
                   frequency:             obs.size.clamp(0, 10) / 10.0,
                   direct_address_ratio:  obs.empty? ? 0.0 : direct_count.to_f / obs.size
                 }
+              end
+
+              def compute_frequency_variance(observations)
+                return 0.0 if observations.size < 3
+
+                timestamps = observations.filter_map { |o| o[:observed_at] || o[:timestamp] }
+                return 0.0 if timestamps.size < 3
+
+                buckets = timestamps.group_by { |t| t.to_i / 3600 }
+                counts  = buckets.values.map { |b| b.size.to_f }
+                mean    = counts.sum / counts.size
+                variance = counts.sum { |c| (c - mean)**2 } / counts.size
+                [variance / [mean, 1.0].max, 1.0].min
+              end
+
+              def compute_reciprocity_imbalance(observations)
+                return 0.0 if observations.empty?
+
+                initiated = observations.count { |o| o[:initiated_by] == :agent || o[:direction] == :outgoing }
+                received  = observations.size - initiated
+                total     = observations.size.to_f
+                return 0.0 if total.zero?
+
+                ((initiated - received).abs / total).clamp(0.0, 1.0)
               end
 
               def resolve_partner_id
@@ -152,6 +177,69 @@ module Legion
                 reciprocity_component = (arc_state[:reciprocity_balance] || 0.5) * 0.3
                 consistency_component = (comm_patterns[:consistency] || 0.5) * 0.3
                 (strength_component + reciprocity_component + consistency_component).clamp(0.0, 1.0)
+              end
+
+              def build_narrative(model, health, arc_state)
+                return nil unless model
+
+                stage     = model.bond_stage
+                style     = model.attachment_style
+                chapter   = arc_state[:current_chapter]
+                parts     = ["Bond is #{stage} (#{style} style)"]
+                parts << "health: #{format('%.1f', health)}" if health
+                parts << "chapter: #{chapter}" if chapter
+                milestones = arc_state[:milestones_today]
+                parts << "#{milestones.size} milestone(s) today" if milestones&.any?
+                "#{parts.join(', ')}."
+              end
+
+              def absence_exceeds_pattern?(agent_id)
+                return false unless agent_id
+
+                if defined?(Legion::Extensions::Agentic::Memory::CommunicationPattern::Runners::CommunicationPattern)
+                  begin
+                    runner = Object.new
+                    runner.extend(Legion::Extensions::Agentic::Memory::CommunicationPattern::Runners::CommunicationPattern)
+                    stats = runner.partner_stats(agent_id: agent_id)
+                    return false unless stats.is_a?(Hash)
+
+                    avg_gap = stats[:average_gap_seconds] || stats[:avg_gap]
+                    return false unless avg_gap&.positive?
+
+                    last_interaction = stats[:last_interaction_at]
+                    return false unless last_interaction
+
+                    current_gap = Time.now - Time.parse(last_interaction.to_s)
+                    return current_gap > (avg_gap * 2.0)
+                  rescue StandardError => _e
+                    return false
+                  end
+                end
+
+                absence_exceeds_pattern_from_observations?(agent_id)
+              end
+
+              def absence_exceeds_pattern_from_observations?(agent_id)
+                store = apollo_local_store
+                return false unless store
+
+                result = store.query(text: 'communication_pattern',
+                                     tags: ['bond', 'communication_pattern', agent_id.to_s])
+                return false unless result[:success] && result[:results]&.any?
+
+                data = deserialize(result[:results].first[:content])
+                return false unless data.is_a?(Hash)
+
+                avg_gap = (data[:average_gap_seconds] || data[:avg_gap])&.to_f
+                return false unless avg_gap&.positive?
+
+                last_str = data[:last_interaction_at]
+                return false unless last_str
+
+                current_gap = Time.now - Time.parse(last_str.to_s)
+                current_gap > (avg_gap * 2.0)
+              rescue StandardError => _e
+                false
               end
 
               def deserialize(content)

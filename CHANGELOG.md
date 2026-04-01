@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.10] - 2026-03-31
+
+### Fixed
+- `extract_style_signals`: replace hardcoded `frequency_variance: 0.0` and `reciprocity_imbalance: 0.0` with real computations (`compute_frequency_variance` from hourly bucket counts, `compute_reciprocity_imbalance` from agent/human direction ratio); `:anxious` attachment style is now reachable
+- `reflect_on_bonds`: `narrative:` field now returns a mechanically generated sentence (stage, style, health, chapter, milestones) instead of always nil
+- `reflect_on_bonds`: add `absence_exceeds_pattern:` field backed by `Legion::Extensions::Agentic::Memory::CommunicationPattern` when available, falling back to Apollo Local communication pattern data
+- `retrieve_interaction_traces` in calibration: split into `retrieve_from_memory` + `retrieve_from_apollo_local` fallback; now returns data from Apollo Local when lex-agentic-memory is absent
+- `check_airb_compliance` in shadow_ai: return `reason:` field alongside `source: :unavailable` so callers know why the check could not run; emit debug log entry
+
 ## [0.1.9] - 2026-03-31
 
 ### Added

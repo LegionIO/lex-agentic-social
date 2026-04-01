@@ -113,6 +113,13 @@ module Legion
               end
 
               def retrieve_interaction_traces
+                traces = retrieve_from_memory
+                return traces if traces.any?
+
+                retrieve_from_apollo_local
+              end
+
+              def retrieve_from_memory
                 return [] unless defined?(Legion::Extensions::Agentic::Memory::Trace::Runners::Traces)
 
                 runner = Object.new
@@ -122,7 +129,17 @@ module Legion
 
                 result[:traces] || []
               rescue StandardError => e
-                Legion::Logging.warn("[calibration] retrieve_interaction_traces error: #{e.message}")
+                Legion::Logging.warn("[calibration] retrieve_from_memory error: #{e.message}")
+                []
+              end
+
+              def retrieve_from_apollo_local
+                return [] unless defined?(Legion::Apollo::Local) && Legion::Apollo::Local.started?
+
+                entries = Legion::Apollo::Local.query_by_tags(tags: ['partner_interaction'], limit: 50)
+                entries.map { |e| { content: e[:content], tags: e[:tags], confidence: e[:confidence] } }
+              rescue StandardError => e
+                Legion::Logging.warn("[calibration] retrieve_from_apollo_local error: #{e.message}")
                 []
               end
 

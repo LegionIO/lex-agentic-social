@@ -43,6 +43,20 @@ RSpec.describe Legion::Extensions::Agentic::Social::Governance::Runners::ShadowA
       result = host.check_airb_compliance
       expect(result[:source]).to eq(:unavailable)
     end
+
+    it 'includes a reason field when unavailable' do
+      result = host.check_airb_compliance
+      expect(result).to have_key(:reason)
+      expect(result[:reason]).to be_a(String)
+      expect(result[:reason]).not_to be_empty
+    end
+
+    it 'logs a debug message when DigitalWorker model is not loaded' do
+      allow(Legion::Logging).to receive(:debug)
+      host.check_airb_compliance
+      expect(Legion::Logging).to have_received(:debug)
+        .with(a_string_including('AIRB compliance check unavailable'))
+    end
   end
 
   describe '#full_scan' do
