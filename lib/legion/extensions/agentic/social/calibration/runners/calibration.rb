@@ -136,8 +136,10 @@ module Legion
               def retrieve_from_apollo_local
                 return [] unless defined?(Legion::Apollo::Local) && Legion::Apollo::Local.started?
 
-                entries = Legion::Apollo::Local.query_by_tags(tags: ['partner_interaction'], limit: 50)
-                entries.map { |e| { content: e[:content], tags: e[:tags], confidence: e[:confidence] } }
+                result = Legion::Apollo::Local.query_by_tags(tags: ['partner_interaction'], limit: 50)
+                return [] unless result[:success] && result[:results].is_a?(Array)
+
+                result[:results].map { |e| { content: e[:content], tags: e[:tags], confidence: e[:confidence] } }
               rescue StandardError => e
                 Legion::Logging.warn("[calibration] retrieve_from_apollo_local error: #{e.message}")
                 []

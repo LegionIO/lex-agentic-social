@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.11] - 2026-04-03
+
+### Fixed
+- `retrieve_from_apollo_local` now correctly unpacks `{ success:, results: }` hash from `Apollo::Local.query_by_tags` instead of treating it as an array
+
 ## [0.1.10] - 2026-03-31
 
 ### Fixed

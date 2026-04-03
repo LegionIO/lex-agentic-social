@@ -90,13 +90,15 @@ RSpec.describe Legion::Extensions::Agentic::Social::Calibration::Runners::Calibr
       stub_const('Legion::Apollo', Module.new)
       stub_const('Legion::Apollo::Local', mock_local)
       allow(mock_local).to receive(:started?).and_return(true)
-      allow(mock_local).to receive(:query_by_tags).with(tags: ['partner_interaction'], limit: 50).and_return([
-                                                                                                               {
+      allow(mock_local).to receive(:query_by_tags).with(tags: ['partner_interaction'], limit: 50).and_return({
+                                                                                                               success: true,
+                                                                                                               results: [{
                                                                                                                  content:    'hello partner',
                                                                                                                  tags:       ['partner_interaction'],
                                                                                                                  confidence: 0.8
-                                                                                                               }
-                                                                                                             ])
+                                                                                                               }],
+                                                                                                               count:   1
+                                                                                                             })
 
       result = client.send(:retrieve_from_apollo_local)
       expect(result).to be_an(Array)
