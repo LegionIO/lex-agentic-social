@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- fix TheoryOfMind phase key from social to social_cognition to match GAIA phase map
+
 ## [0.1.11] - 2026-04-03
 
 ### Fixed

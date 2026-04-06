@@ -168,7 +168,7 @@ module Legion
               end
 
               def extract_social_observations(tick_results)
-                social = tick_results.dig(:social, :reputation_updates)
+                social = tick_results.dig(:social_cognition, :reputation_updates)
                 return unless social.is_a?(Array)
 
                 social.each do |update|
