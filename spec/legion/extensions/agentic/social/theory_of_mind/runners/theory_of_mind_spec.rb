@@ -181,7 +181,7 @@ RSpec.describe Legion::Extensions::Agentic::Social::TheoryOfMind::Runners::Theor
 
     it 'extracts social observations from tick results' do
       tick = {
-        social: {
+        social_cognition: {
           reputation_updates: [
             { agent_id: :a1, standing: :respected, composite: 0.7 },
             { agent_id: :a2, standing: :neutral, composite: 0.5 }
