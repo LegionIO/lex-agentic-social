@@ -8,6 +8,11 @@ module Legion
       module Social
         module Governance
           module Helpers
+            # NOTE: Proposal state is stored in-memory only (@proposals hash).
+            # This is a safety-critical system (controls consent and containment approval).
+            # Persistence to a durable store (e.g. legion-data) is required so that
+            # proposals survive process restarts. Implementing persistence is tracked
+            # as a separate task.
             class Proposal
               attr_reader :proposals
 

@@ -40,6 +40,18 @@ RSpec.describe Legion::Extensions::Agentic::Social::Governance::Runners::Governa
     end
   end
 
+  describe '#review_transition' do
+    it 'delegates to validate_action and returns allowed: true' do
+      result = client.review_transition(action: 'terminate', authority: 'admin')
+      expect(result[:allowed]).to be true
+    end
+
+    it 'accepts context keyword argument' do
+      result = client.review_transition(action: 'pause', context: { reason: 'maintenance' })
+      expect(result).to have_key(:allowed)
+    end
+  end
+
   describe '#validate_action' do
     it 'allows agent_validation' do
       result = client.validate_action(layer: :agent_validation, action: 'test')

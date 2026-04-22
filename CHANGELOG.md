@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.14] - 2026-04-22
+### Added
+- `Governance#review_transition` method — API expected by lex-extinction for containment governance gate
+- Mirror::Actor::ResonanceDecay (120s) for `decay_resonances`
+### Fixed
+- `Governance#validate_action` now logs the action parameter instead of ignoring it
+- Documented Mirror vs MirrorSystem state isolation and ObservedBehavior class distinctions
+
 ## [0.1.13] - 2026-04-15
 ### Changed
 - Set `mcp_tools?`, `mcp_tools_deferred?`, and `transport_required?` to `false` — internal cognitive pipeline extension

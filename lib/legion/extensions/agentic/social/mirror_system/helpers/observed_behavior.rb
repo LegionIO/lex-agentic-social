@@ -1,5 +1,17 @@
 # frozen_string_literal: true
 
+# MirrorSystem::Helpers::ObservedBehavior models an ongoing observation of a
+# specific agent's behavior pattern, keyed by (agent_id, action, domain). It
+# tracks resonance (familiarity strength) that increases with repeated
+# observations (observe_again) or explicit simulation boosts (boost_familiarity)
+# and decays over time. Fidelity of imitation is tracked via observation_count.
+#
+# Distinct from SocialLearning::Helpers::ObservedBehavior, which is a one-shot
+# snapshot of a behavior modeled from another agent, with retention (recall)
+# mechanics and a reproduction flag. The SocialLearning variant focuses on
+# whether the observer can reproduce what it saw; the MirrorSystem variant
+# focuses on resonance-based familiarity and imitation fidelity over time.
+
 module Legion
   module Extensions
     module Agentic
