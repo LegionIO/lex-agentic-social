@@ -56,9 +56,15 @@ module Legion
                 { checked: open.size, timed_out: timed.size, timed_out_ids: timed_ids }
               end
 
-              def validate_action(layer:, action: nil, _context: {}, **) # rubocop:disable Lint/UnusedMethodArgument
+              def review_transition(action:, authority: nil, context: {}, **)
+                log.info "[governance] review_transition: action=#{action} authority=#{authority}"
+                validate_action(layer: :agent_validation, action: action, _context: context)
+              end
+
+              def validate_action(layer:, action: nil, _context: {}, **)
                 return { error: :invalid_layer } unless Helpers::Layers.valid_layer?(layer)
 
+                log.info "[governance] validating action=#{action} layer=#{layer}"
                 result = case layer
                          when :agent_validation
                            { allowed: true, layer: layer, reason: :self_validated }

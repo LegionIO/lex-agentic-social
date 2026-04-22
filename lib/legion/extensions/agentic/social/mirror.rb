@@ -8,6 +8,7 @@ require 'legion/extensions/agentic/social/mirror/helpers/mirror_engine'
 require 'legion/extensions/agentic/social/mirror/runners/observe'
 require 'legion/extensions/agentic/social/mirror/runners/simulate'
 require 'legion/extensions/agentic/social/mirror/runners/resonance'
+require 'legion/extensions/agentic/social/mirror/actors/resonance_decay'
 require 'legion/extensions/agentic/social/mirror/client'
 
 module Legion

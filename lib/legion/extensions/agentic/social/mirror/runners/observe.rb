@@ -40,6 +40,11 @@ module Legion
 
               private
 
+              # mirror_engine is provided by Mirror::Client, which initializes
+              # @mirror_engine once in its constructor and exposes it via attr_reader.
+              # All three runner modules (Observe, Simulate, Resonance) share that
+              # single engine instance through the Client, ensuring observations in
+              # Observe are visible to Resonance and Simulate.
               def mirror_engine
                 @mirror_engine ||= Helpers::MirrorEngine.new
               end
