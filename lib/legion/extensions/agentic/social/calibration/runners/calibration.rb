@@ -79,10 +79,14 @@ module Legion
               end
 
               def promote_partner_knowledge(**)
+                return { success: true, skipped: :shutting_down } if shutting_down?
                 return { success: true, skipped: :local_unavailable } unless apollo_local_available?
 
                 total = 0
                 Helpers::Constants::PROMOTABLE_TAGS.each do |tags|
+                  return { success: true, promoted: total, stopped: :shutting_down } if shutting_down?
+                  return { success: true, promoted: total, stopped: :local_unavailable } unless apollo_local_available?
+
                   result = Legion::Apollo::Local.promote_to_global(tags: tags, min_confidence: Helpers::Constants::PROMOTION_MIN_CONFIDENCE)
                   total += result[:promoted] if result[:success]
                 end
@@ -110,6 +114,14 @@ module Legion
 
               def apollo_local_available?
                 defined?(Legion::Apollo::Local) && Legion::Apollo::Local.started?
+              end
+
+              def shutting_down?
+                return Legion.shutting_down? if defined?(Legion) && Legion.respond_to?(:shutting_down?)
+
+                defined?(Legion::Settings) && Legion::Settings.dig(:client, :shutting_down) == true
+              rescue StandardError => _e
+                false
               end
 
               def retrieve_interaction_traces

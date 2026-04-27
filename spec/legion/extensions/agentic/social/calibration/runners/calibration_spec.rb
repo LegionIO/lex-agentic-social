@@ -146,6 +146,32 @@ RSpec.describe Legion::Extensions::Agentic::Social::Calibration::Runners::Calibr
       result = client.promote_partner_knowledge
       expect(result[:skipped]).to eq(:local_unavailable)
     end
+
+    it 'skips when Legion is shutting down' do
+      allow(Legion::Settings).to receive(:dig).with(:client, :shutting_down).and_return(true)
+
+      result = client.promote_partner_knowledge
+      expect(result[:skipped]).to eq(:shutting_down)
+    end
+
+    it 'stops when Apollo Local becomes unavailable between tag groups' do
+      mock_local = double('apollo_local')
+      stub_const('Legion::Apollo', Module.new)
+      stub_const('Legion::Apollo::Local', mock_local)
+      allow(Legion::Settings).to receive(:dig).with(:client, :shutting_down).and_return(false)
+      allow(mock_local).to receive(:started?).and_return(true, true, false)
+      expect(mock_local).to receive(:promote_to_global)
+        .with(
+          tags:           Legion::Extensions::Agentic::Social::Calibration::Helpers::Constants::PROMOTABLE_TAGS.first,
+          min_confidence: Legion::Extensions::Agentic::Social::Calibration::Helpers::Constants::PROMOTION_MIN_CONFIDENCE
+        )
+        .once
+        .and_return({ success: true, promoted: 2 })
+
+      result = client.promote_partner_knowledge
+      expect(result[:promoted]).to eq(2)
+      expect(result[:stopped]).to eq(:local_unavailable)
+    end
   end
 
   describe '#sync_partner_knowledge' do
