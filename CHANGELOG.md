@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.15] - 2026-04-27
+### Fixed
+- Stop social calibration partner-knowledge promotion when Legion is shutting down or Apollo Local becomes unavailable between promotable tag groups
+
 ## [0.1.14] - 2026-04-22
 ### Added
 - `Governance#review_transition` method — API expected by lex-extinction for containment governance gate
