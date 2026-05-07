@@ -14,7 +14,8 @@ module Legion
                 unregistered = installed - registered
                 { installed: installed.size, registered: registered.size, unregistered: unregistered }
               rescue StandardError => e
-                { installed: 0, registered: 0, unregistered: [], error: e.message }
+                Legion::Logging.warn("[governance:shadow_ai] extension scan failed: #{e.message}")
+                { installed: 0, registered: 0, unregistered: [], scan_failed: true, error: e.message }
               end
 
               def check_llm_bypass_indicators(**)
@@ -47,7 +48,8 @@ module Legion
                 bypass = check_llm_bypass_indicators
                 compliance = check_airb_compliance
 
-                has_issues = extensions[:unregistered]&.any? || bypass[:bypassed] || compliance[:non_compliant]&.any?
+                has_issues = extensions[:scan_failed] || extensions[:unregistered]&.any? ||
+                             bypass[:bypassed] || compliance[:non_compliant]&.any?
                 emit_shadow_event(extensions, bypass, compliance) if has_issues
 
                 { extensions: extensions, bypass: bypass, compliance: compliance, issues_found: has_issues }

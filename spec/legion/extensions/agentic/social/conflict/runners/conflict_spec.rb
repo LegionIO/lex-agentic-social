@@ -78,6 +78,17 @@ RSpec.describe Legion::Extensions::Agentic::Social::Conflict::Runners::Conflict 
       expect(result[:stale_ids]).to include(c[:conflict_id])
     end
 
+    it 'detects stale conflicts restored with string created_at values' do
+      c = client.register_conflict(parties: %w[a b], severity: :medium, description: 'old')
+      conflict = client.instance_variable_get(:@conflict_log).conflicts[c[:conflict_id]]
+      conflict[:created_at] = (Time.now.utc - (Legion::Extensions::Agentic::Social::Conflict::Helpers::Severity::STALE_CONFLICT_TIMEOUT + 1)).iso8601
+
+      result = client.check_stale_conflicts
+
+      expect(result[:stale_count]).to eq(1)
+      expect(result[:stale_ids]).to include(c[:conflict_id])
+    end
+
     it 'does not include resolved conflicts in stale check' do
       c = client.register_conflict(parties: %w[a b], severity: :low, description: 'resolved')
       conflict = client.instance_variable_get(:@conflict_log).conflicts[c[:conflict_id]]
