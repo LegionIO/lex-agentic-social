@@ -89,6 +89,25 @@ RSpec.describe Legion::Extensions::Agentic::Social::MoralReasoning::Helpers::Mor
       expect(result[:dilemma][:resolved]).to be true
     end
 
+    it 'uses the dilemma severity when reinforcing chosen foundations' do
+      dilemma_id = engine.pose_dilemma(
+        description: 'Low severity',
+        options:     options,
+        severity:    0.2
+      )[:dilemma][:id]
+      before_weight = engine.foundation_profile[:care][:weight]
+
+      engine.resolve_dilemma(
+        dilemma_id: dilemma_id,
+        option_id:  'opt_a',
+        reasoning:  'Least harm',
+        framework:  :care_ethics
+      )
+
+      after_weight = engine.foundation_profile[:care][:weight]
+      expect(after_weight - before_weight).to be_within(0.001).of(0.02)
+    end
+
     it 'returns failure for unknown dilemma_id' do
       result = engine.resolve_dilemma(
         dilemma_id: 'nonexistent', option_id: 'opt_a',

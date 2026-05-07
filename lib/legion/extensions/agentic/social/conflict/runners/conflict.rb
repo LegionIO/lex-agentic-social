@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'time'
+
 module Legion
   module Extensions
     module Agentic
@@ -70,12 +72,12 @@ module Legion
 
               def check_stale_conflicts(**)
                 active = conflict_log.active_conflicts
-                stale  = active.select { |c| Time.now.utc - c[:created_at] > Helpers::Severity::STALE_CONFLICT_TIMEOUT }
+                stale  = active.select { |c| conflict_age_seconds(c) > Helpers::Severity::STALE_CONFLICT_TIMEOUT }
                 stale.each do |c|
                   message = 'conflict marked stale — no resolution after 24h'
 
                   if Helpers::LlmEnhancer.available?
-                    age_hours = (Time.now.utc - c[:created_at]) / 3600.0
+                    age_hours = conflict_age_seconds(c) / 3600.0
                     analysis  = Helpers::LlmEnhancer.analyze_stale_conflict(
                       description:    c[:description],
                       severity:       c[:severity],
@@ -102,6 +104,12 @@ module Legion
 
               def conflict_log
                 @conflict_log ||= Helpers::ConflictLog.new
+              end
+
+              def conflict_age_seconds(conflict)
+                created_at = conflict[:created_at]
+                created_at = Time.parse(created_at) if created_at.is_a?(String)
+                Time.now.utc - created_at
               end
             end
           end

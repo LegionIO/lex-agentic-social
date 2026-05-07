@@ -70,6 +70,24 @@ RSpec.describe Legion::Extensions::Agentic::Social::Calibration::Runners::Calibr
       result = client.extract_preferences_via_llm
       expect(result[:skipped]).to eq(:llm_unavailable)
     end
+
+    it 'stores symbol-keyed parsed preferences with domain and value intact' do
+      mock_local = double('apollo_local')
+      stub_const('Legion::Apollo', Module.new)
+      stub_const('Legion::Apollo::Local', mock_local)
+      allow(mock_local).to receive(:started?).and_return(true)
+      allow(mock_local).to receive(:upsert)
+
+      client.send(:store_llm_preferences, [{ domain: 'tone', value: 'concise', confidence: 0.8 }])
+
+      expect(mock_local).to have_received(:upsert) do |args|
+        content = Legion::JSON.load(args[:content])
+        expect(content[:domain]).to eq('tone')
+        expect(content[:value]).to eq('concise')
+        expect(args[:tags]).to include('preference:tone')
+        expect(args[:confidence]).to eq(0.8)
+      end
+    end
   end
 
   describe '#retrieve_from_memory' do

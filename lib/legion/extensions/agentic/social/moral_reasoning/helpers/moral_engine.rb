@@ -117,7 +117,7 @@ module Legion
                 return { success: false, reason: :invalid_option } unless chosen
 
                 dilemma.resolve(option_id: option_id, reasoning: reasoning, framework: framework)
-                reinforce_chosen_foundations(chosen)
+                reinforce_chosen_foundations(chosen, severity: dilemma.severity)
                 weaken_unchosen_foundations(dilemma.options, option_id)
                 add_history(type: :resolution, dilemma_id: dilemma_id, option_id: option_id,
                             framework: framework, severity: dilemma.severity)
@@ -210,9 +210,9 @@ module Legion
                 end
               end
 
-              def reinforce_chosen_foundations(chosen_option)
+              def reinforce_chosen_foundations(chosen_option, severity:)
                 chosen_option.fetch(:foundations, []).each do |fid|
-                  @foundations[fid]&.reinforce(amount: chosen_option.fetch(:severity, 1.0))
+                  @foundations[fid]&.reinforce(amount: severity)
                 end
               end
 
