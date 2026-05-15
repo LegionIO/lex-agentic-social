@@ -112,6 +112,53 @@ RSpec.describe Legion::Extensions::Agentic::Social::Conflict::Helpers::LlmEnhanc
         expect(result).to be_nil
       end
     end
+
+    context 'when LLM returns a native content response (direct dispatch path)' do
+      let(:native_response) do
+        double(content: "OUTCOME: resolved\nNOTES: Native dispatch resolved the conflict directly.")
+      end
+
+      before do
+        allow(Legion::LLM).to receive(:chat).and_return(native_response)
+      end
+
+      it 'calls Legion::LLM.chat with system and user messages' do
+        expect(Legion::LLM).to receive(:chat).with(
+          hash_including(
+            message: array_including(
+              hash_including(role: 'system'),
+              hash_including(role: 'user')
+            )
+          )
+        ).and_return(native_response)
+        described_class.suggest_resolution(
+          description: 'Agent and human disagree',
+          severity:    :medium,
+          exchanges:   []
+        )
+      end
+
+      it 'calls Legion::LLM.chat with caller metadata' do
+        expect(Legion::LLM).to receive(:chat).with(
+          hash_including(caller: { extension: 'lex-agentic-social', mode: :conflict })
+        ).and_return(native_response)
+        described_class.suggest_resolution(
+          description: 'Agent and human disagree',
+          severity:    :medium,
+          exchanges:   []
+        )
+      end
+
+      it 'uses the content directly without calling ask' do
+        expect(native_response).not_to receive(:ask)
+        result = described_class.suggest_resolution(
+          description: 'Agent and human disagree',
+          severity:    :medium,
+          exchanges:   []
+        )
+        expect(result[:suggested_outcome]).to eq(:resolved)
+      end
+    end
   end
 
   describe '.analyze_stale_conflict' do
@@ -183,6 +230,47 @@ RSpec.describe Legion::Extensions::Agentic::Social::Conflict::Helpers::LlmEnhanc
           description: 'test', severity: :medium, age_hours: 30.0, exchange_count: 3
         )
         expect(result).to be_nil
+      end
+    end
+
+    context 'when LLM returns a native content response (direct dispatch path)' do
+      let(:native_response) do
+        double(content: "RECOMMENDATION: escalate\nANALYSIS: Native dispatch recommends escalation.")
+      end
+
+      before do
+        allow(Legion::LLM).to receive(:chat).and_return(native_response)
+      end
+
+      it 'calls Legion::LLM.chat with system and user messages' do
+        expect(Legion::LLM).to receive(:chat).with(
+          hash_including(
+            message: array_including(
+              hash_including(role: 'system'),
+              hash_including(role: 'user')
+            )
+          )
+        ).and_return(native_response)
+        described_class.analyze_stale_conflict(
+          description: 'Stale safety concern', severity: :high, age_hours: 40.0, exchange_count: 1
+        )
+      end
+
+      it 'calls Legion::LLM.chat with caller metadata' do
+        expect(Legion::LLM).to receive(:chat).with(
+          hash_including(caller: { extension: 'lex-agentic-social', mode: :conflict })
+        ).and_return(native_response)
+        described_class.analyze_stale_conflict(
+          description: 'Stale safety concern', severity: :high, age_hours: 40.0, exchange_count: 1
+        )
+      end
+
+      it 'uses the content directly without calling ask' do
+        expect(native_response).not_to receive(:ask)
+        result = described_class.analyze_stale_conflict(
+          description: 'Stale safety concern', severity: :high, age_hours: 40.0, exchange_count: 1
+        )
+        expect(result[:recommendation]).to eq(:escalate)
       end
     end
   end

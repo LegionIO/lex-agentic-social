@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.17] - 2026-05-15
+### Fixed
+- Social LLM enhancers now send explicit system and user messages to native `Legion::LLM.chat` dispatch instead of opening legacy nil-input chat sessions.
+- Calibration LLM preference upsert now passes `access_scope: 'private'` and `identity_principal_id: nil` to prevent daemon process identity injection on personal data writes.
+
 ## [0.1.16] - 2026-05-07
 ### Fixed
 - Calibration preference storage now handles symbol-keyed parsed LLM preferences without dropping domain or value.

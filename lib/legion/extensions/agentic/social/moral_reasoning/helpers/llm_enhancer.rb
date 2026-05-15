@@ -50,9 +50,14 @@ module Legion
                   content = response&.message&.dig(:content)
                   ::Struct.new(:content).new(content) if content
                 else
-                  chat = Legion::LLM.chat
-                  chat.with_instructions(SYSTEM_PROMPT)
-                  chat.ask(prompt)
+                  response = Legion::LLM.chat(
+                    message: [
+                      { role: 'system', content: SYSTEM_PROMPT },
+                      { role: 'user', content: prompt }
+                    ],
+                    caller:  { extension: 'lex-agentic-social', mode: :moral_reasoning }
+                  )
+                  response.respond_to?(:content) ? response : response.ask(prompt)
                 end
               end
               private_class_method :llm_ask

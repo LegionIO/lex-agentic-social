@@ -204,7 +204,10 @@ module Legion
                                                 'confidence' => confidence
                                               })
                   tags = base_tags + ["preference:#{domain}"]
-                  Legion::Apollo::Local.upsert(content: content, tags: tags, confidence: confidence)
+                  Legion::Apollo::Local.upsert(content: content, tags: tags,
+                                               confidence: confidence,
+                                               access_scope: 'private',
+                                               identity_principal_id: nil)
                 end
               end
             end

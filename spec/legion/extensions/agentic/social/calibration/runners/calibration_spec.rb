@@ -200,4 +200,52 @@ RSpec.describe Legion::Extensions::Agentic::Social::Calibration::Runners::Calibr
       expect(result[:results]).to have_key(:promotion)
     end
   end
+
+  describe '#store_llm_preferences' do
+    let(:preferences) do
+      [{ 'domain' => 'communication', 'value' => 'direct', 'confidence' => 0.8 }]
+    end
+
+    before do
+      mock_local = double('apollo_local')
+      stub_const('Legion::Apollo', Module.new)
+      stub_const('Legion::Apollo::Local', mock_local)
+      allow(mock_local).to receive(:started?).and_return(true)
+      allow(mock_local).to receive(:upsert).and_return({ success: true })
+    end
+
+    it 'passes access_scope: private to Apollo::Local.upsert' do
+      mock_local = Legion::Apollo::Local
+      client.send(:store_llm_preferences, preferences)
+      expect(mock_local).to have_received(:upsert).with(
+        hash_including(access_scope: 'private')
+      )
+    end
+
+    it 'passes content and tags to Apollo::Local.upsert' do
+      mock_local = Legion::Apollo::Local
+      client.send(:store_llm_preferences, preferences)
+      expect(mock_local).to have_received(:upsert).with(
+        hash_including(
+          content: a_string_including('direct'),
+          tags:    array_including('preference', 'preference:communication')
+        )
+      )
+    end
+
+    it 'does not inject process identity as the owner' do
+      stub_const('Legion::Identity::Process', Module.new do
+        extend self
+
+        define_method(:identity_hash) do
+          { canonical_name: 'daemon', db_principal_id: 999, db_identity_id: 888 }
+        end
+      end)
+      mock_local = Legion::Apollo::Local
+      client.send(:store_llm_preferences, preferences)
+      expect(mock_local).to have_received(:upsert).with(
+        hash_including(identity_principal_id: nil)
+      )
+    end
+  end
 end
