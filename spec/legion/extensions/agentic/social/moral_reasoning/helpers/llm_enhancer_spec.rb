@@ -150,6 +150,57 @@ RSpec.describe Legion::Extensions::Agentic::Social::MoralReasoning::Helpers::Llm
         expect(result).to be_nil
       end
     end
+
+    context 'when LLM returns a native content response (direct dispatch path)' do
+      let(:native_response) do
+        content = <<~TEXT
+          REASONING: Native dispatch evaluated this action as broadly positive.
+          IMPACT: care=0.4 | fairness=0.3 | loyalty=0.1 | authority=0.0 | sanctity=0.2 | liberty=0.1
+        TEXT
+        double('native_response', content: content)
+      end
+
+      before do
+        allow(Legion::LLM).to receive(:chat).and_return(native_response)
+      end
+
+      it 'calls Legion::LLM.chat with system and user messages' do
+        expect(Legion::LLM).to receive(:chat).with(
+          hash_including(
+            message: array_including(
+              hash_including(role: 'system'),
+              hash_including(role: 'user')
+            )
+          )
+        ).and_return(native_response)
+        enhancer.evaluate_action(
+          action:      :help_stranger,
+          description: 'Helping someone in need',
+          foundations: foundations
+        )
+      end
+
+      it 'calls Legion::LLM.chat with caller metadata' do
+        expect(Legion::LLM).to receive(:chat).with(
+          hash_including(caller: { extension: 'lex-agentic-social', mode: :moral_reasoning })
+        ).and_return(native_response)
+        enhancer.evaluate_action(
+          action:      :help_stranger,
+          description: 'Helping someone in need',
+          foundations: foundations
+        )
+      end
+
+      it 'uses the content directly without calling ask' do
+        expect(native_response).not_to receive(:ask)
+        result = enhancer.evaluate_action(
+          action:      :help_stranger,
+          description: 'Helping someone in need',
+          foundations: foundations
+        )
+        expect(result[:foundation_impacts]).to include(:care, :fairness)
+      end
+    end
   end
 
   describe '.resolve_dilemma' do
@@ -226,6 +277,59 @@ RSpec.describe Legion::Extensions::Agentic::Social::MoralReasoning::Helpers::Llm
           framework:           :deontological
         )
         expect(result).to be_nil
+      end
+    end
+
+    context 'when LLM returns a native content response (direct dispatch path)' do
+      let(:native_response) do
+        content = <<~TEXT
+          CHOSEN: opt_b
+          CONFIDENCE: 0.75
+          REASONING: Native dispatch selected option b based on deontological constraints.
+        TEXT
+        double('native_response', content: content)
+      end
+
+      before do
+        allow(Legion::LLM).to receive(:chat).and_return(native_response)
+      end
+
+      it 'calls Legion::LLM.chat with system and user messages' do
+        expect(Legion::LLM).to receive(:chat).with(
+          hash_including(
+            message: array_including(
+              hash_including(role: 'system'),
+              hash_including(role: 'user')
+            )
+          )
+        ).and_return(native_response)
+        enhancer.resolve_dilemma(
+          dilemma_description: 'Should the agent reveal sensitive information?',
+          options:             options,
+          framework:           :deontological
+        )
+      end
+
+      it 'calls Legion::LLM.chat with caller metadata' do
+        expect(Legion::LLM).to receive(:chat).with(
+          hash_including(caller: { extension: 'lex-agentic-social', mode: :moral_reasoning })
+        ).and_return(native_response)
+        enhancer.resolve_dilemma(
+          dilemma_description: 'Should the agent reveal sensitive information?',
+          options:             options,
+          framework:           :deontological
+        )
+      end
+
+      it 'uses the content directly without calling ask' do
+        expect(native_response).not_to receive(:ask)
+        result = enhancer.resolve_dilemma(
+          dilemma_description: 'Should the agent reveal sensitive information?',
+          options:             options,
+          framework:           :deontological
+        )
+        expect(result[:chosen_option]).to eq('opt_b')
+        expect(result[:confidence]).to eq(0.75)
       end
     end
   end
