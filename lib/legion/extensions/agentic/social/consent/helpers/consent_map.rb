@@ -170,14 +170,14 @@ module Legion
                     []
                   end
 
-                  @domains[key] = {
+                  @domains[key].merge!(
                     tier:            row[:tier].to_sym,
                     success_count:   row[:success_count].to_i,
                     failure_count:   row[:failure_count].to_i,
                     total_actions:   row[:total_actions].to_i,
                     last_changed_at: row[:last_changed_at],
                     history:         history
-                  }
+                  )
                 end
               rescue StandardError => e
                 Legion::Logging.warn "[consent] load_from_local failed: #{e.message}"

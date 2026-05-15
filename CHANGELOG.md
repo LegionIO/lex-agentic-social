@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.16] - 2026-05-07
+### Fixed
+- Calibration preference storage now handles symbol-keyed parsed LLM preferences without dropping domain or value.
+- Consent restore preserves pending approval fields after local DB reloads.
+- Shadow AI scans flag scan failures as issues, conflict stale checks parse restored string timestamps, and moral reasoning reinforcement uses dilemma severity.
+
 ## [0.1.15] - 2026-04-27
 ### Fixed
 - Stop social calibration partner-knowledge promotion when Legion is shutting down or Apollo Local becomes unavailable between promotable tag groups

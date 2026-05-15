@@ -194,15 +194,18 @@ module Legion
 
                 base_tags = %w[partner preference llm_inference]
                 preferences.each do |pref|
+                  domain = pref[:domain] || pref['domain']
+                  value = pref[:value] || pref['value']
+                  confidence = pref[:confidence] || pref['confidence'] || 0.65
                   content = Legion::JSON.dump({
-                                                'domain'     => pref['domain'],
-                                                'value'      => pref['value'],
+                                                'domain'     => domain,
+                                                'value'      => value,
                                                 'source'     => 'llm_inference',
-                                                'confidence' => pref['confidence'] || 0.65
+                                                'confidence' => confidence
                                               })
-                  tags = base_tags + ["preference:#{pref['domain']}"]
+                  tags = base_tags + ["preference:#{domain}"]
                   Legion::Apollo::Local.upsert(content: content, tags: tags,
-                                               confidence: pref['confidence'] || 0.65,
+                                               confidence: confidence,
                                                access_scope: 'private',
                                                identity_principal_id: nil)
                 end

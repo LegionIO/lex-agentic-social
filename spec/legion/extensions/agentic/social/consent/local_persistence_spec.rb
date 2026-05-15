@@ -122,6 +122,25 @@ RSpec.describe 'lex-consent local SQLite persistence' do
       expect(map.domains['email'][:total_actions]).to eq(6)
     end
 
+    it 'restores pending fields with default nil values' do
+      db[:consent_domains].insert(
+        domain_key:    'email',
+        tier:          'consult',
+        success_count: 1,
+        failure_count: 0,
+        total_actions: 1,
+        history:       '[]'
+      )
+
+      map = Legion::Extensions::Agentic::Social::Consent::Helpers::ConsentMap.new
+      expect(map.pending?('email')).to be false
+      expect(map.domains['email']).to include(
+        pending_tier:         nil,
+        pending_since:        nil,
+        pending_requested_by: nil
+      )
+    end
+
     it 'restores history as an array of hashes with symbol keys' do
       history_json = JSON.generate([{ 'from' => 'consult', 'to' => 'act_notify', 'at' => Time.now.utc.to_s }])
       db[:consent_domains].insert(

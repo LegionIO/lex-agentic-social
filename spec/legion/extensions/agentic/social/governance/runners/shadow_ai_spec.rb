@@ -75,5 +75,20 @@ RSpec.describe Legion::Extensions::Agentic::Social::Governance::Runners::ShadowA
       expect(result[:issues_found]).to be_falsey
       expect(result[:extensions][:installed]).to eq(5)
     end
+
+    it 'treats extension scan failure as an issue' do
+      allow(host).to receive(:scan_unregistered_extensions).and_return(
+        { installed: 0, registered: 0, unregistered: [], scan_failed: true, error: 'Gemfile not found' }
+      )
+      allow(host).to receive(:check_llm_bypass_indicators).and_return(
+        { indicators: [], bypassed: false }
+      )
+      allow(host).to receive(:check_airb_compliance).and_return(
+        { checked: 0, source: :unavailable }
+      )
+
+      result = host.full_scan
+      expect(result[:issues_found]).to be true
+    end
   end
 end
