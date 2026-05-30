@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.18] - 2026-05-29
+### Added
+- Database index on `trust_entries.domain` column for faster filtered domain lookups
+
 ## [0.1.17] - 2026-05-15
 ### Fixed
 - Social LLM enhancers now send explicit system and user messages to native `Legion::LLM.chat` dispatch instead of opening legacy nil-input chat sessions.
