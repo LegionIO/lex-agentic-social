@@ -14,29 +14,21 @@ module Legion
               attr_reader :domains
 
               def initialize
-                @domains = Hash.new do |h, k|
-                  h[k] = {
-                    tier:                 Tiers::DEFAULT_TIER,
-                    success_count:        0,
-                    failure_count:        0,
-                    total_actions:        0,
-                    last_changed_at:      nil,
-                    history:              [],
-                    pending_tier:         nil,
-                    pending_since:        nil,
-                    pending_requested_by: nil
-                  }
-                end
+                @domains = {}
                 load_from_local
               end
 
               def get_tier(domain)
-                @domains[domain][:tier]
+                entry = @domains[domain]
+                return Tiers::DEFAULT_TIER unless entry
+
+                entry[:tier]
               end
 
               def set_tier(domain, tier)
                 return unless Tiers.valid_tier?(tier)
 
+                ensure_domain(domain)
                 entry = @domains[domain]
                 old_tier = entry[:tier]
                 entry[:tier] = tier
@@ -47,6 +39,7 @@ module Legion
               end
 
               def record_outcome(domain, success:)
+                ensure_domain(domain)
                 entry = @domains[domain]
                 entry[:total_actions] += 1
                 if success
@@ -59,14 +52,14 @@ module Legion
 
               def success_rate(domain)
                 entry = @domains[domain]
-                return 0.0 if entry[:total_actions].zero?
+                return 0.0 unless entry && entry[:total_actions].positive?
 
                 entry[:success_count].to_f / entry[:total_actions]
               end
 
               def eligible_for_change?(domain)
                 entry = @domains[domain]
-                return false if entry[:total_actions] < Tiers::MIN_ACTIONS_TO_PROMOTE
+                return false unless entry && entry[:total_actions] >= Tiers::MIN_ACTIONS_TO_PROMOTE
 
                 if entry[:last_changed_at]
                   (Time.now.utc - entry[:last_changed_at]) >= Tiers::PROMOTION_COOLDOWN
@@ -108,6 +101,7 @@ module Legion
               end
 
               def set_pending(domain, proposed_tier:, requested_by: 'system')
+                ensure_domain(domain)
                 entry = @domains[domain]
                 entry[:pending_tier] = proposed_tier
                 entry[:pending_since] = Time.now
@@ -118,6 +112,8 @@ module Legion
 
               def clear_pending(domain)
                 entry = @domains[domain]
+                return unless entry
+
                 entry[:pending_tier] = nil
                 entry[:pending_since] = nil
                 entry[:pending_requested_by] = nil
@@ -126,12 +122,15 @@ module Legion
               end
 
               def pending?(domain)
-                !@domains[domain][:pending_tier].nil?
+                entry = @domains[domain]
+                return false unless entry
+
+                !entry[:pending_tier].nil?
               end
 
               def pending_expired?(domain, timeout: APPROVAL_TIMEOUT)
                 entry = @domains[domain]
-                return false unless entry[:pending_since]
+                return false unless entry && entry[:pending_since]
 
                 Time.now - entry[:pending_since] > timeout
               end
@@ -174,6 +173,7 @@ module Legion
                     []
                   end
 
+                  @domains[key] = new_entry
                   @domains[key].merge!(
                     tier:            row[:tier].to_sym,
                     success_count:   row[:success_count].to_i,
@@ -188,6 +188,24 @@ module Legion
               end
 
               private
+
+              def ensure_domain(domain)
+                @domains[domain] = new_entry unless @domains.key?(domain)
+              end
+
+              def new_entry
+                {
+                  tier:                 Tiers::DEFAULT_TIER,
+                  success_count:        0,
+                  failure_count:        0,
+                  total_actions:        0,
+                  last_changed_at:      nil,
+                  history:              [],
+                  pending_tier:         nil,
+                  pending_since:        nil,
+                  pending_requested_by: nil
+                }
+              end
 
               def persist!
                 save_to_local
