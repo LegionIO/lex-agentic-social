@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.19] - 2026-06-01
+### Fixed
+- Calibration LLM preference extraction now uses `Legion::LLM.chat` with explicit system/user messages instead of legacy `Legion::LLM.ask`.
+- Governance Proposal store now persists to Apollo Local on create, vote, and resolution — safety-critical proposal state survives restarts.
+- ConsentMap changes (tier changes, action outcomes, pending approvals) are now saved to local storage automatically on every mutation.
+- ConflictLog now evicts old resolved conflicts (30-day retention) and enforces a 1000-entry cap to prevent unbounded memory growth.
+
 ## [0.1.18] - 2026-05-29
 ### Added
 - Database index on `trust_entries.domain` column for faster filtered domain lookups

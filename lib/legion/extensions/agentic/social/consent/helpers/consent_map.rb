@@ -43,6 +43,7 @@ module Legion
                 entry[:last_changed_at] = Time.now.utc
                 entry[:history] << { from: old_tier, to: tier, at: Time.now.utc }
                 entry[:history].shift while entry[:history].size > 50
+                persist!
               end
 
               def record_outcome(domain, success:)
@@ -53,6 +54,7 @@ module Legion
                 else
                   entry[:failure_count] += 1
                 end
+                persist!
               end
 
               def success_rate(domain)
@@ -110,6 +112,7 @@ module Legion
                 entry[:pending_tier] = proposed_tier
                 entry[:pending_since] = Time.now
                 entry[:pending_requested_by] = requested_by
+                persist!
                 entry
               end
 
@@ -118,6 +121,7 @@ module Legion
                 entry[:pending_tier] = nil
                 entry[:pending_since] = nil
                 entry[:pending_requested_by] = nil
+                persist!
                 entry
               end
 
@@ -184,6 +188,10 @@ module Legion
               end
 
               private
+
+              def persist!
+                save_to_local
+              end
 
               def success_rate_from(entry)
                 return 0.0 if entry[:total_actions].zero?
