@@ -17,6 +17,7 @@ module Legion
 
                 id = conflict_log.record(parties: parties, severity: severity, description: description)
                 conflict = conflict_log.get(id)
+                conflict_log.evict
                 log.info "[conflict] registered: id=#{id[0..7]} severity=#{severity} posture=#{conflict[:posture]} parties=#{parties.join(',')}"
                 { conflict_id: id, severity: severity, posture: conflict[:posture] }
               end

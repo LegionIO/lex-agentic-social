@@ -65,7 +65,13 @@ module Legion
 
                 context = summarize_traces(traces)
                 prompt = build_preference_prompt(context)
-                result = Legion::LLM.ask(message: prompt)
+                result = Legion::LLM.chat(
+                  message: [
+                    { role: 'system', content: 'You are a preference inference engine. Respond ONLY with JSON.' },
+                    { role: 'user', content: prompt }
+                  ],
+                  caller:  { extension: 'lex-agentic-social', mode: :calibration }
+                )
                 return { success: false, error: :llm_failed } unless result&.content
 
                 parsed = parse_preference_response(result.content)
