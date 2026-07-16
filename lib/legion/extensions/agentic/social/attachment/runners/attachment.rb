@@ -25,7 +25,7 @@ module Legion
                 { agents_updated: agents.size, models: agents.map { |id| attachment_store.get(id)&.to_h } }
               end
 
-              def reflect_on_bonds(tick_results: {}, bond_summary: {}, **)
+              def reflect_on_bonds(**)
                 store = apollo_local_store
                 return { success: false, error: :no_store } unless store
 
