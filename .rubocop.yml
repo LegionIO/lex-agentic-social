@@ -22,6 +22,9 @@ Legion/HelperMigration/DirectJson:
 Legion/HelperMigration/DirectLlm:
   Enabled: false
 
+Legion/Llm/TaxonomyEnum:
+  Enabled: false
+
 Legion/HelperMigration/DirectCache:
   Enabled: false
 
