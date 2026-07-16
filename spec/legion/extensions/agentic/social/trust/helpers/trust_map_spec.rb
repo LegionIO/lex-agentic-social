@@ -296,4 +296,70 @@ RSpec.describe Legion::Extensions::Agentic::Social::Trust::Helpers::TrustMap do
       expect(map.count).to eq(3)
     end
   end
+
+  describe 'partner_identity keying (H0)' do
+    let(:partner_x) { 'user:alice' }
+    let(:partner_y) { 'user:bob' }
+
+    it 'entries scoped to partner_x are not visible under partner_y' do
+      map.record_interaction(agent_id, positive: true, partner_identity: partner_x)
+      expect(map.get(agent_id, partner_identity: partner_y)).to be_nil
+    end
+
+    it 'independent entries exist per partner_identity' do
+      map.record_interaction(agent_id, positive: true, partner_identity: partner_x)
+      map.record_interaction(agent_id, positive: false, partner_identity: partner_y)
+      expect(map.get(agent_id, partner_identity: partner_x)[:composite]).to be >
+                                                                            map.get(agent_id, partner_identity: partner_y)[:composite]
+    end
+
+    it 'entries keyed without partner_identity are independent from partner-scoped entries' do
+      map.record_interaction(agent_id, positive: true)
+      map.record_interaction(agent_id, positive: false, partner_identity: partner_x)
+      expect(map.get(agent_id)[:composite]).not_to eq(map.get(agent_id, partner_identity: partner_x)[:composite])
+    end
+
+    it 'count includes all partner-scoped entries' do
+      map.get_or_create(agent_id, partner_identity: partner_x)
+      map.get_or_create(agent_id, partner_identity: partner_y)
+      expect(map.count).to eq(2)
+    end
+  end
+
+  describe '#erase_partner!(identity:)' do
+    let(:partner_x) { 'user:alice' }
+    let(:partner_y) { 'user:bob' }
+
+    before do
+      map.record_interaction(agent_id, positive: true, partner_identity: partner_x)
+      map.record_interaction(agent_id, positive: true, partner_identity: partner_y)
+      map.record_interaction('other-agent', positive: true, partner_identity: partner_x)
+    end
+
+    it 'removes all entries for the given partner_identity' do
+      map.erase_partner!(identity: partner_x)
+      expect(map.get(agent_id, partner_identity: partner_x)).to be_nil
+      expect(map.get('other-agent', partner_identity: partner_x)).to be_nil
+    end
+
+    it 'leaves entries for other partner identities untouched' do
+      map.erase_partner!(identity: partner_x)
+      expect(map.get(agent_id, partner_identity: partner_y)).not_to be_nil
+    end
+
+    it 'marks the map as dirty' do
+      map.mark_clean!
+      map.erase_partner!(identity: partner_x)
+      expect(map).to be_dirty
+    end
+
+    it 'returns the count of removed entries' do
+      count = map.erase_partner!(identity: partner_x)
+      expect(count).to eq(2)
+    end
+
+    it 'returns 0 when no entries exist for that identity' do
+      expect(map.erase_partner!(identity: 'unknown')).to eq(0)
+    end
+  end
 end
