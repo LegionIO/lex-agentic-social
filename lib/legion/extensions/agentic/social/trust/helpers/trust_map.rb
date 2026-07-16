@@ -10,7 +10,7 @@ module Legion
               attr_reader :entries
 
               def initialize
-                @entries = {} # key: "agent_id:domain"
+                @entries = {} # key: "partner_identity|agent_id:domain"
                 @dirty = false
               end
 
@@ -23,16 +23,16 @@ module Legion
                 self
               end
 
-              def get(agent_id, domain: :general)
-                @entries[key(agent_id, domain)]
+              def get(agent_id, domain: :general, partner_identity: nil)
+                @entries[key(agent_id, domain, partner_identity)]
               end
 
-              def get_or_create(agent_id, domain: :general)
-                @entries[key(agent_id, domain)] ||= TrustModel.new_trust_entry(agent_id: agent_id, domain: domain)
+              def get_or_create(agent_id, domain: :general, partner_identity: nil)
+                @entries[key(agent_id, domain, partner_identity)] ||= TrustModel.new_trust_entry(agent_id: agent_id, domain: domain)
               end
 
-              def record_interaction(agent_id, positive:, domain: :general)
-                entry = get_or_create(agent_id, domain: domain)
+              def record_interaction(agent_id, positive:, domain: :general, partner_identity: nil)
+                entry = get_or_create(agent_id, domain: domain, partner_identity: partner_identity)
                 entry[:interaction_count] += 1
                 entry[:last_interaction] = Time.now.utc
 
@@ -51,6 +51,14 @@ module Legion
                 entry[:composite] = TrustModel.composite_score(entry[:dimensions])
                 @dirty = true
                 entry
+              end
+
+              def erase_partner!(identity:)
+                prefix = "#{identity}|"
+                removed = @entries.keys.select { |k| k.start_with?(prefix) }
+                removed.each { |k| @entries.delete(k) }
+                @dirty = true if removed.any?
+                removed.size
               end
 
               def reinforce_dimension(agent_id, dimension:, domain: :general, amount: TrustModel::TRUST_REINFORCEMENT)
@@ -121,8 +129,9 @@ module Legion
 
               private
 
-              def key(agent_id, domain)
-                "#{agent_id}:#{domain}"
+              def key(agent_id, domain, partner_identity = nil)
+                base = "#{agent_id}:#{domain}"
+                partner_identity ? "#{partner_identity}|#{base}" : base
               end
 
               def build_apollo_tags(agent_id, domain)

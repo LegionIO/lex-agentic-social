@@ -61,7 +61,7 @@ module Legion
                 validate_action(layer: :agent_validation, action: action, _context: context)
               end
 
-              def validate_action(layer:, action: nil, _context: {}, **)
+              def validate_action(layer:, action: nil, context: {}, **)
                 return { error: :invalid_layer } unless Helpers::Layers.valid_layer?(layer)
 
                 log.info "[governance] validating action=#{action} layer=#{layer}"

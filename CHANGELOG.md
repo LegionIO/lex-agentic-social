@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.20] - 2026-07-16
+### Added
+- `CalibrationRegistry`: per-identity `CalibrationStore` instances keyed by identity string, fixing the grading-contamination bug where one interlocutor's reactions moved another's calibration weights.
+- `CalibrationRegistry#erase_partner!(identity:)`: removes all calibration data for a given identity, leaving others untouched.
+- `CalibrationRegistry#known_identities`: returns all registered identity keys.
+- `CalibrationRegistry#to_apollo_entries_for(identity:)`: returns Apollo persistence entries scoped to one identity.
+- `TrustMap` gains `partner_identity:` keyword on `get`, `get_or_create`, and `record_interaction` — entries are keyed as `(partner_identity, agent_id, domain)` for H7 scoping.
+- `TrustMap#erase_partner!(identity:)`: removes all trust entries scoped to the given partner identity and marks the map dirty.
+
 ## [0.1.19] - 2026-06-01
 ### Fixed
 - Calibration LLM preference extraction now uses `Legion::LLM.chat` with explicit system/user messages instead of legacy `Legion::LLM.ask`.
