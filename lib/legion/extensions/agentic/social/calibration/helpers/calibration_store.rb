@@ -28,10 +28,11 @@ module Legion
                 self
               end
 
-              def record_advisory(advisory_id:, advisory_types:)
+              def record_advisory(advisory_id:, advisory_types:, applied: nil)
                 @last_advisory_meta = {
                   advisory_id:    advisory_id,
                   advisory_types: Array(advisory_types).map(&:to_s),
+                  applied:        applied,
                   timestamp:      Time.now.utc
                 }
               end
@@ -45,6 +46,7 @@ module Legion
 
                 reaction_score = compute_reaction_score(observation)
                 confidence = compute_confidence(observation)
+                applied_from_meta = @last_advisory_meta[:applied]
 
                 deltas = @last_advisory_meta[:advisory_types].map do |type|
                   apply_delta(type: type, reaction_score: reaction_score, confidence: confidence)
@@ -52,7 +54,7 @@ module Legion
 
                 @last_advisory_meta = nil
                 @dirty = true
-                { success: true, deltas: deltas }
+                { success: true, deltas: deltas, reaction_score: reaction_score, applied: applied_from_meta }
               end
 
               def calibration_weights

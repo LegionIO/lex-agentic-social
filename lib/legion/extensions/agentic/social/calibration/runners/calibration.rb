@@ -21,11 +21,12 @@ module Legion
                 result = calibration_store.evaluate_reaction(observation: observation)
                 return { success: true, skipped: :no_advisory } unless result
 
-                { success: true, deltas: result[:deltas], weights: calibration_store.calibration_weights }
+                { success: true, deltas: result[:deltas], weights: calibration_store.calibration_weights,
+                  reaction_score: result[:reaction_score], applied: result[:applied] }
               end
 
-              def record_advisory_meta(advisory_id:, advisory_types:, **)
-                calibration_store.record_advisory(advisory_id: advisory_id, advisory_types: advisory_types)
+              def record_advisory_meta(advisory_id:, advisory_types:, applied: nil, **)
+                calibration_store.record_advisory(advisory_id: advisory_id, advisory_types: advisory_types, applied: applied)
                 { success: true }
               end
 

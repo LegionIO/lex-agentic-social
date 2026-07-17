@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.21] - 2026-07-16
+### Added
+- `CalibrationStore#record_advisory` gains `applied:` kwarg to store which behavioral synapses were applied alongside the advisory.
+- `CalibrationStore#evaluate_reaction` now returns `reaction_score` (Float 0.0–1.0) and `applied` hash in its result hash, enabling legion-gaia's H2 synapse grading path.
+- `Calibration` runner `record_advisory_meta` accepts and passes through the `applied:` kwarg.
+- `Calibration` runner `update_calibration` passes through `reaction_score` and `applied` from the store result.
+
 ## [0.1.20] - 2026-07-16
 ### Added
 - `CalibrationRegistry`: per-identity `CalibrationStore` instances keyed by identity string, fixing the grading-contamination bug where one interlocutor's reactions moved another's calibration weights.
