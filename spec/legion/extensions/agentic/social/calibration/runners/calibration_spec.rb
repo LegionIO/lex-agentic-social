@@ -22,12 +22,35 @@ RSpec.describe Legion::Extensions::Agentic::Social::Calibration::Runners::Calibr
       expect(result[:success]).to be true
       expect(result[:deltas]).not_to be_empty
     end
+
+    it 'returns reaction_score in result when advisory recorded' do
+      client.record_advisory_meta(advisory_id: 'test', advisory_types: [:tone_adjustment])
+      result = client.update_calibration(observation: { content: 'thanks', direct_address: true, content_length: 20 })
+      expect(result).to have_key(:reaction_score)
+      expect(result[:reaction_score]).to be_a(Float)
+    end
+
+    it 'returns applied in result when advisory recorded with applied kwarg' do
+      applied_data = { synapse_ids: [5, 6] }
+      client.record_advisory_meta(advisory_id: 'test', advisory_types: [:tone_adjustment], applied: applied_data)
+      result = client.update_calibration(observation: { content: 'thanks', direct_address: true, content_length: 20 })
+      expect(result[:applied]).to eq(applied_data)
+    end
   end
 
   describe '#record_advisory_meta' do
     it 'succeeds' do
       result = client.record_advisory_meta(advisory_id: 'abc', advisory_types: [:partner_hint])
       expect(result[:success]).to be true
+    end
+
+    it 'accepts and passes applied kwarg' do
+      applied_data = { synapse_ids: [1, 2], strategy: 'verbosity' }
+      result = client.record_advisory_meta(advisory_id: 'abc', advisory_types: [:partner_hint], applied: applied_data)
+      expect(result[:success]).to be true
+      # Verify the applied data flows through to evaluate_reaction
+      eval_result = client.update_calibration(observation: { content: 'thanks', content_length: 10 })
+      expect(eval_result[:applied]).to eq(applied_data)
     end
   end
 

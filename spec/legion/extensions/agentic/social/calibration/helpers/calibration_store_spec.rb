@@ -48,6 +48,19 @@ RSpec.describe Legion::Extensions::Agentic::Social::Calibration::Helpers::Calibr
       expect(result).not_to be_nil
       expect(result[:deltas].size).to eq(2)
     end
+
+    it 'stores applied kwarg when provided' do
+      applied_data = { synapse_ids: [1, 2, 3], strategy: 'tone' }
+      store.record_advisory(advisory_id: 'abc', advisory_types: [:tone_adjustment], applied: applied_data)
+      result = store.evaluate_reaction(observation: { content: 'thanks' })
+      expect(result[:applied]).to eq(applied_data)
+    end
+
+    it 'stores nil applied when not provided' do
+      store.record_advisory(advisory_id: 'abc', advisory_types: [:tone_adjustment])
+      result = store.evaluate_reaction(observation: { content: 'thanks' })
+      expect(result[:applied]).to be_nil
+    end
   end
 
   describe '#evaluate_reaction' do
@@ -89,6 +102,40 @@ RSpec.describe Legion::Extensions::Agentic::Social::Calibration::Helpers::Calibr
       it 'records history entry' do
         store.evaluate_reaction(observation: { content: 'thanks' })
         expect(store.history['tone_adjustment']).not_to be_empty
+      end
+
+      it 'returns reaction_score as a float between 0.0 and 1.0' do
+        result = store.evaluate_reaction(observation: { content: 'thanks' })
+        expect(result[:reaction_score]).to be_a(Float)
+        expect(result[:reaction_score]).to be_between(0.0, 1.0)
+      end
+
+      it 'returns applied from recorded advisory' do
+        store.mark_clean!
+        applied_data = { synapse_ids: [10, 20] }
+        store.record_advisory(advisory_id: 'test2', advisory_types: [:tone_adjustment], applied: applied_data)
+        result = store.evaluate_reaction(observation: { content: 'ok' })
+        expect(result[:applied]).to eq(applied_data)
+      end
+    end
+
+    context 'reaction_score signal ranges' do
+      it 'returns reaction_score >= 0.6 for positive feedback' do
+        store.record_advisory(advisory_id: 'pos', advisory_types: [:tone_adjustment])
+        result = store.evaluate_reaction(observation: { content: 'thanks, perfect!', direct_address: true, content_length: 50 })
+        expect(result[:reaction_score]).to be >= 0.6
+      end
+
+      it 'returns reaction_score <= 0.4 for negative feedback' do
+        store.record_advisory(advisory_id: 'neg', advisory_types: [:tone_adjustment])
+        result = store.evaluate_reaction(observation: { content: 'no, wrong, stop', content_length: 5 })
+        expect(result[:reaction_score]).to be <= 0.4
+      end
+
+      it 'returns reaction_score between 0.4 and 0.6 for neutral feedback' do
+        store.record_advisory(advisory_id: 'neu', advisory_types: [:tone_adjustment])
+        result = store.evaluate_reaction(observation: { content: 'I see', content_length: 10 })
+        expect(result[:reaction_score]).to be_between(0.4, 0.6)
       end
     end
   end
