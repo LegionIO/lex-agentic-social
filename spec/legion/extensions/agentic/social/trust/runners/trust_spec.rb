@@ -44,6 +44,22 @@ RSpec.describe Legion::Extensions::Agentic::Social::Trust::Runners::Trust do
 
       expect(code_trust[:trust][:composite]).to be > ops_trust[:trust][:composite]
     end
+
+    it 'isolates partner trust through recording, reinforcement and delegation queries' do
+      20.times do
+        client.record_trust_interaction(agent_id: 'worker', positive: true, partner_identity: 'alice')
+      end
+      client.record_trust_interaction(agent_id: 'worker', positive: false, partner_identity: 'bob')
+      alice_before = client.get_trust(agent_id: 'worker', partner_identity: 'alice')[:trust][:composite]
+      client.reinforce_trust_dimension(agent_id: 'worker', dimension: :competence, amount: 0.1, partner_identity: 'bob')
+
+      expect(client.get_trust(agent_id: 'worker', partner_identity: 'alice')[:trust][:composite]).to eq(alice_before)
+      expect(client.get_trust(agent_id: 'worker', partner_identity: 'bob')[:trust][:interaction_count]).to eq(1)
+      expect(client.get_trust(agent_id: 'worker')[:found]).to be false
+      expect(client.delegatable_agents(partner_identity: 'alice')[:agents].map { |entry| entry[:agent_id] }).to eq(['worker'])
+      expect(client.trusted_agents(partner_identity: 'bob')[:agents]).to be_empty
+      expect(client.trusted_agents[:agents]).to be_empty
+    end
   end
 
   describe '#reinforce_trust_dimension' do

@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.0] - 2026-10-29
+### Changed
+- Scope calibration by human and match pending feedback to existing exchange attribution. Identified feedback cannot consume legacy unattributed receipts; callers must pass matching identity and applied exchange context.
+- Preserve partner identity in serialized trust state. Older readers that discard this identity are not safe rollback targets for scoped trust data.
+### Fixed
+- Reject ambiguous and duplicate feedback; evaluate against prior baselines and prioritize explicit corrections over weak timing/length cues.
+- Stop treating delayed or terse replies as negative evidence, and leave missing measurements out of baseline updates.
+- Honor partner-scoped trust during recording, reinforcement, lookup, and delegation queries.
+- Reject expired consent approvals synchronously and invalidate pending approval after a tier change without affecting other domains.
+
 ## [0.1.21] - 2026-07-16
 ### Added
 - `CalibrationStore#record_advisory` gains `applied:` kwarg to store which behavioral synapses were applied alongside the advisory.

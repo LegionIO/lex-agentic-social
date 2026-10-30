@@ -10,23 +10,32 @@ module Legion
               include Legion::Extensions::Helpers::Lex if defined?(Legion::Extensions::Helpers) &&
                                                           Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
-              def update_calibration(observation: nil, **)
+              def update_calibration(observation: nil, identity: nil, **)
                 return { success: true, skipped: :no_observation } unless observation
+                return { success: true, skipped: :identity_mismatch } if identity && observation[:identity] && identity.to_s != observation[:identity].to_s
 
-                calibration_store.update_baseline(
-                  latency: observation[:latency] || 0,
-                  length:  observation[:content_length] || 0
-                )
+                identity ||= observation[:identity]
+                return { success: true, skipped: :unattributed_identity } if identity && identity.to_s.strip.empty?
 
-                result = calibration_store.evaluate_reaction(observation: observation)
+                store = calibration_store(identity: identity)
+                observation = observation.merge(identity: identity) if identity
+                result = store.evaluate_reaction(observation: observation)
+                store.update_baseline(latency: observation[:latency], length: observation[:content_length])
                 return { success: true, skipped: :no_advisory } unless result
 
-                { success: true, deltas: result[:deltas], weights: calibration_store.calibration_weights,
+                { success: true, deltas: result[:deltas], weights: store.calibration_weights,
                   reaction_score: result[:reaction_score], applied: result[:applied] }
               end
 
-              def record_advisory_meta(advisory_id:, advisory_types:, applied: nil, **)
-                calibration_store.record_advisory(advisory_id: advisory_id, advisory_types: advisory_types, applied: applied)
+              def record_advisory_meta(advisory_id:, advisory_types:, applied: nil, identity: nil, **)
+                return { success: false, error: :identity_mismatch } if identity && applied&.dig(:identity) && identity.to_s != applied[:identity].to_s
+
+                identity ||= applied&.dig(:identity)
+                return { success: false, error: :unattributed_identity } if identity && identity.to_s.strip.empty?
+
+                calibration_store(identity: identity).record_advisory(
+                  advisory_id: advisory_id, advisory_types: advisory_types, applied: applied, identity: identity
+                )
                 { success: true }
               end
 
@@ -35,16 +44,17 @@ module Legion
                 { success: true, feedback: feedback }
               end
 
-              def calibration_weights(**)
-                { success: true, weights: calibration_store.calibration_weights }
+              def calibration_weights(identity: nil, **)
+                { success: true, weights: calibration_store(identity: identity).calibration_weights }
               end
 
-              def calibration_stats(**)
+              def calibration_stats(identity: nil, **)
+                store = calibration_store(identity: identity)
                 {
                   success:        true,
-                  weights:        calibration_store.calibration_weights,
-                  history_counts: calibration_store.history.transform_values(&:size),
-                  dirty:          calibration_store.dirty?
+                  weights:        store.calibration_weights,
+                  history_counts: store.history.transform_values(&:size),
+                  dirty:          store.dirty?
                 }
               end
 
@@ -105,8 +115,11 @@ module Legion
 
               private
 
-              def calibration_store
-                @calibration_store ||= Helpers::CalibrationStore.new
+              def calibration_store(identity: nil)
+                return @calibration_store ||= Legion::Extensions::Agentic::Social::Calibration::Helpers::CalibrationStore.new if identity.nil?
+
+                @calibration_registry ||= Legion::Extensions::Agentic::Social::Calibration::Helpers::CalibrationRegistry.new
+                @calibration_registry.for(identity: identity)
               end
 
               def should_extract_preferences?

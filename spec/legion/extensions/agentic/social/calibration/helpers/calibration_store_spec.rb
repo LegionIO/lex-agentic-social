@@ -114,7 +114,7 @@ RSpec.describe Legion::Extensions::Agentic::Social::Calibration::Helpers::Calibr
         store.mark_clean!
         applied_data = { synapse_ids: [10, 20] }
         store.record_advisory(advisory_id: 'test2', advisory_types: [:tone_adjustment], applied: applied_data)
-        result = store.evaluate_reaction(observation: { content: 'ok' })
+        result = store.evaluate_reaction(observation: { advisory_id: 'test2', content: 'ok' })
         expect(result[:applied]).to eq(applied_data)
       end
     end
@@ -137,6 +137,91 @@ RSpec.describe Legion::Extensions::Agentic::Social::Calibration::Helpers::Calibr
         result = store.evaluate_reaction(observation: { content: 'I see', content_length: 10 })
         expect(result[:reaction_score]).to be_between(0.4, 0.6)
       end
+    end
+
+    it 'matches out-of-order feedback to its exchange without consuming the newer advisory' do
+      first = { identity: 'alice', exchange_id: 'first' }
+      second = { identity: 'alice', exchange_id: 'second' }
+      store.record_advisory(advisory_id: 'first', advisory_types: [:tone_adjustment], applied: first)
+      store.record_advisory(advisory_id: 'second', advisory_types: [:verbosity_adjustment], applied: second)
+
+      result = store.evaluate_reaction(observation: first.merge(content: 'wrong'))
+      expect(result[:applied]).to eq(first)
+      expect(store.calibration_weights['tone_adjustment']).to be < 0.5
+      expect(store.calibration_weights['verbosity_adjustment']).to eq(0.5)
+      expect(store.evaluate_reaction(observation: second.merge(content: 'thanks'))[:applied]).to eq(second)
+      expect(store.calibration_weights['verbosity_adjustment']).to be > 0.5
+    end
+
+    it 'leaves ambiguous and unattributed feedback ungraded until the exchange is identified' do
+      %w[first second].each do |exchange|
+        store.record_advisory(advisory_id: exchange, advisory_types: [:tone_adjustment],
+                              applied: { identity: 'alice', exchange_id: exchange })
+      end
+
+      expect(store.evaluate_reaction(observation: { identity: 'alice', content: 'wrong' })).to be_nil
+      expect(store.evaluate_reaction(observation: { exchange_id: 'first', content: 'wrong' })).to be_nil
+      expect(store.calibration_weights['tone_adjustment']).to eq(0.5)
+      result = store.evaluate_reaction(observation: { identity: 'alice', exchange_id: 'first', content: 'wrong' })
+      expect(result[:deltas].first[:new_weight]).to be < 0.5
+    end
+
+    it 'does not grade an unattributed advisory using an identified human' do
+      store.record_advisory(advisory_id: 'legacy', advisory_types: [:tone_adjustment])
+      expect(store.evaluate_reaction(observation: { identity: 'bob', content: 'wrong' })).to be_nil
+      expect(store.calibration_weights['tone_adjustment']).to eq(0.5)
+    end
+
+    it 'grades an advisory once despite repeated receipt and feedback delivery' do
+      applied = { identity: 'alice', exchange_id: 'exchange' }
+      2.times do
+        store.record_advisory(advisory_id: 'receipt', advisory_types: %i[tone_adjustment tone_adjustment], applied: applied)
+      end
+      store.evaluate_reaction(observation: applied.merge(content: 'thanks'))
+      weight = store.calibration_weights['tone_adjustment']
+      store.record_advisory(advisory_id: 'receipt', advisory_types: [:tone_adjustment], applied: applied)
+
+      expect(store.evaluate_reaction(observation: applied.merge(content: 'thanks'))).to be_nil
+      expect(store.calibration_weights['tone_adjustment']).to eq(weight)
+      expect(store.history['tone_adjustment'].size).to eq(1)
+    end
+
+    it 'does not guess which pending legacy advisory a reaction describes' do
+      store.record_advisory(advisory_id: 'first', advisory_types: [:tone_adjustment])
+      store.record_advisory(advisory_id: 'second', advisory_types: [:verbosity_adjustment])
+      expect(store.evaluate_reaction(observation: { content: 'wrong' })).to be_nil
+      expect(store.calibration_weights.values).to all(eq(0.5))
+    end
+
+    it 'keeps an explicit correction negative despite polite words and positive weak cues' do
+      store.update_baseline(latency: 10, length: 20)
+      store.record_advisory(advisory_id: 'correction', advisory_types: [:tone_adjustment])
+      result = store.evaluate_reaction(observation: {
+                                         content: 'thanks, but that is wrong', latency: 1,
+                                         content_length: 100, direct_address: true
+                                       })
+      expect(result[:reaction_score]).to be < 0.5
+      expect(store.calibration_weights['tone_adjustment']).to be < 0.5
+    end
+
+    it 'does not treat delayed terse replies as negative evidence' do
+      store.update_baseline(latency: 2, length: 100)
+      store.record_advisory(advisory_id: 'delayed', advisory_types: [:tone_adjustment])
+      result = store.evaluate_reaction(observation: { content: 'ok', latency: 500, content_length: 2 })
+      expect(result[:reaction_score]).to eq(0.5)
+      expect(store.calibration_weights['tone_adjustment']).to eq(0.5)
+    end
+
+    it 'expires old receipts without discarding a fresh exchange' do
+      now = Time.utc(2026, 10, 29)
+      allow(Time).to receive(:now).and_return(now)
+      store.record_advisory(advisory_id: 'old', advisory_types: [:tone_adjustment])
+      allow(Time).to receive(:now).and_return(now + 3601)
+      store.record_advisory(advisory_id: 'fresh', advisory_types: [:verbosity_adjustment])
+      expect(store.evaluate_reaction(observation: { advisory_id: 'old', content: 'wrong' })).to be_nil
+      store.evaluate_reaction(observation: { advisory_id: 'fresh', content: 'thanks' })
+      expect(store.calibration_weights['tone_adjustment']).to eq(0.5)
+      expect(store.calibration_weights['verbosity_adjustment']).to be > 0.5
     end
   end
 
@@ -181,6 +266,14 @@ RSpec.describe Legion::Extensions::Agentic::Social::Calibration::Helpers::Calibr
       weights_entry = entries.find { |e| e[:tags].include?('weights') }
       parsed = Legion::JSON.parse(weights_entry[:content])
       expect(parsed[:baselines][:avg_latency]).to be_between(2.0, 4.0)
+    end
+
+    it 'does not turn missing measurements into a zero baseline' do
+      store.update_baseline(latency: 10, length: 100)
+      store.update_baseline(latency: nil, length: nil)
+      store.record_advisory(advisory_id: 'baseline', advisory_types: [:tone_adjustment])
+      result = store.evaluate_reaction(observation: { latency: 7.5, content_length: 48 })
+      expect(result[:reaction_score]).to eq(0.6)
     end
   end
 

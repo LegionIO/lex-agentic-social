@@ -14,7 +14,8 @@ module Legion
                   [type.to_s, Constants::NEUTRAL_SCORE]
                 end
                 @history = {}
-                @last_advisory_meta = nil
+                @pending_advisories = {}
+                @evaluated_advisories = {}
                 @partner_baselines = { 'avg_latency' => nil, 'avg_length' => nil }
                 @dirty = false
               end
@@ -28,33 +29,41 @@ module Legion
                 self
               end
 
-              def record_advisory(advisory_id:, advisory_types:, applied: nil)
-                @last_advisory_meta = {
+              def record_advisory(advisory_id:, advisory_types:, applied: nil, identity: nil)
+                return if identity && applied&.dig(:identity) && identity.to_s != applied[:identity].to_s
+
+                expire_advisories!
+                return if @evaluated_advisories.key?(advisory_id) || @pending_advisories.key?(advisory_id)
+
+                attribution = (applied || {}).slice(:identity, :exchange_id, :conversation_id).compact
+                attribution[:identity] = identity unless identity.nil?
+                @pending_advisories[advisory_id] = {
                   advisory_id:    advisory_id,
-                  advisory_types: Array(advisory_types).map(&:to_s),
+                  advisory_types: Array(advisory_types).map(&:to_s).uniq,
                   applied:        applied,
+                  attribution:    attribution,
                   timestamp:      Time.now.utc
                 }
               end
 
               def evaluate_reaction(observation:)
-                return nil unless @last_advisory_meta
-                return nil if @last_advisory_meta[:advisory_types].empty?
+                expire_advisories!
+                candidates = @pending_advisories.values.select { |meta| matches_observation?(meta, observation) }
+                return nil unless candidates.one?
 
-                elapsed = Time.now.utc - @last_advisory_meta[:timestamp]
-                return nil if elapsed > 3600
+                meta = candidates.first
+                return nil if meta[:advisory_types].empty?
 
                 reaction_score = compute_reaction_score(observation)
                 confidence = compute_confidence(observation)
-                applied_from_meta = @last_advisory_meta[:applied]
-
-                deltas = @last_advisory_meta[:advisory_types].map do |type|
+                deltas = meta[:advisory_types].map do |type|
                   apply_delta(type: type, reaction_score: reaction_score, confidence: confidence)
                 end
 
-                @last_advisory_meta = nil
+                @pending_advisories.delete(meta[:advisory_id])
+                @evaluated_advisories[meta[:advisory_id]] = meta[:timestamp]
                 @dirty = true
-                { success: true, deltas: deltas, reaction_score: reaction_score, applied: applied_from_meta }
+                { success: true, deltas: deltas, reaction_score: reaction_score, applied: meta[:applied] }
               end
 
               def calibration_weights
@@ -63,23 +72,19 @@ module Legion
 
               def detect_explicit_feedback(content)
                 text = content.to_s
-                return :positive if text.match?(Constants::POSITIVE_PATTERNS)
                 return :negative if text.match?(Constants::NEGATIVE_PATTERNS)
+                return :positive if text.match?(Constants::POSITIVE_PATTERNS)
 
                 :neutral
               end
 
               def update_baseline(latency:, length:)
-                @partner_baselines['avg_latency'] = if @partner_baselines['avg_latency']
-                                                      (@partner_baselines['avg_latency'] * 0.9) + (latency.to_f * 0.1)
-                                                    else
-                                                      latency.to_f
-                                                    end
-                @partner_baselines['avg_length'] = if @partner_baselines['avg_length']
-                                                     (@partner_baselines['avg_length'] * 0.9) + (length.to_f * 0.1)
-                                                   else
-                                                     length.to_f
-                                                   end
+                { 'avg_latency' => latency, 'avg_length' => length }.each do |key, value|
+                  next if value.nil?
+
+                  previous = @partner_baselines[key]
+                  @partner_baselines[key] = previous ? (previous * 0.9) + (value.to_f * 0.1) : value.to_f
+                end
               end
 
               def to_apollo_entries
@@ -120,28 +125,40 @@ module Legion
 
               private
 
+              def expire_advisories!
+                cutoff = Time.now.utc - 3600
+                @pending_advisories.delete_if { |_id, meta| meta[:timestamp] < cutoff }
+                @evaluated_advisories.delete_if { |_id, timestamp| timestamp < cutoff }
+              end
+
+              def matches_observation?(meta, observation)
+                return false if observation[:advisory_id] && observation[:advisory_id] != meta[:advisory_id]
+
+                attribution = meta[:attribution]
+                return false unless attribution.all? do |key, value|
+                  !value.to_s.strip.empty? && observation[key] && observation[key].to_s == value.to_s
+                end
+
+                %i[identity exchange_id conversation_id].none? do |key|
+                  observation[key] && !attribution.key?(key)
+                end
+              end
+
               def compute_reaction_score(observation)
                 score = 0.0
 
                 feedback = detect_explicit_feedback(observation[:content] || '')
-                case feedback
-                when :positive then score += Constants::SIGNAL_WEIGHTS[:explicit_feedback]
-                when :negative then score -= Constants::SIGNAL_WEIGHTS[:explicit_feedback]
-                end
+                return (1.0 + Constants::SIGNAL_WEIGHTS[:explicit_feedback]) / 2.0 if feedback == :positive
+                return (1.0 - Constants::SIGNAL_WEIGHTS[:explicit_feedback]) / 2.0 if feedback == :negative
 
-                if @partner_baselines['avg_latency'] && observation[:latency]
+                if @partner_baselines['avg_latency']&.positive? && observation[:latency]
                   ratio = observation[:latency].to_f / @partner_baselines['avg_latency']
-                  latency_signal = if ratio < 0.8
-                                     1.0
-                                   else
-                                     (ratio > 1.5 ? -1.0 : 0.0)
-                                   end
-                  score += Constants::SIGNAL_WEIGHTS[:response_latency] * latency_signal
+                  score += Constants::SIGNAL_WEIGHTS[:response_latency] if ratio < 0.8
                 end
 
                 if @partner_baselines['avg_length'] && observation[:content_length]
-                  length_signal = observation[:content_length].to_f / [@partner_baselines['avg_length'], 1].max > 0.5 ? 1.0 : -1.0
-                  score += Constants::SIGNAL_WEIGHTS[:message_length] * length_signal
+                  ratio = observation[:content_length].to_f / [@partner_baselines['avg_length'], 1].max
+                  score += Constants::SIGNAL_WEIGHTS[:message_length] if ratio > 0.5
                 end
 
                 score += Constants::SIGNAL_WEIGHTS[:direct_address] if observation[:direct_address]

@@ -136,6 +136,46 @@ RSpec.describe Legion::Extensions::Agentic::Social::Consent::Runners::Consent do
       expect(result[:approved]).to be false
       expect(result[:error]).to eq('no_pending_approval')
     end
+
+    it 'rejects expired approval without relying on a scheduled expiry sweep' do
+      now = Time.utc(2026, 10, 29)
+      allow(Time).to receive(:now).and_return(now)
+      client.request_autonomous_approval(domain: 'email')
+      timeout = Legion::Extensions::Agentic::Social::Consent::Helpers::ConsentMap::APPROVAL_TIMEOUT
+      allow(Time).to receive(:now).and_return(now + timeout + 1)
+
+      expect(client.approve_promotion(domain: 'email', approved_by: 'admin')[:approved]).to be false
+      expect(client.check_consent(domain: 'email')[:allowed]).to be false
+      expect(client.request_autonomous_approval(domain: 'email')[:requested]).to be true
+    end
+
+    it 'does not let an old approval undo a subsequent demotion in another domain' do
+      client.request_autonomous_approval(domain: 'email')
+      client.request_autonomous_approval(domain: 'calendar')
+      client.apply_tier_change(domain: 'email', new_tier: :human_only)
+
+      expect(client.approve_promotion(domain: 'email', approved_by: 'admin')[:approved]).to be false
+      expect(client.check_consent(domain: 'email')[:human_only]).to be true
+      expect(client.approve_promotion(domain: 'calendar', approved_by: 'admin')[:approved]).to be true
+      expect(client.check_consent(domain: 'email')[:allowed]).to be false
+    end
+
+    it 'does not grant consent from positive calibration or trust feedback' do
+      calibration = Legion::Extensions::Agentic::Social::Calibration::Client.new
+      trust = Legion::Extensions::Agentic::Social::Trust::Client.new
+      client.apply_tier_change(domain: 'email', new_tier: :human_only)
+      client.request_autonomous_approval(domain: 'calendar')
+      20.times do |index|
+        calibration.record_advisory_meta(advisory_id: index, identity: 'alice', advisory_types: [:tone_adjustment])
+        calibration.update_calibration(observation: { identity: 'alice', content: 'thanks' })
+        trust.record_trust_interaction(agent_id: 'alice', positive: true)
+      end
+
+      expect(client.check_consent(domain: 'email')[:human_only]).to be true
+      expect(client.check_consent(domain: 'calendar')[:allowed]).to be false
+      expect(client.approve_promotion(domain: 'calendar', approved_by: 'admin')[:approved]).to be true
+      expect(client.check_consent(domain: 'email')[:allowed]).to be false
+    end
   end
 
   describe '#reject_promotion' do

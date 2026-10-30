@@ -10,8 +10,8 @@ module Legion
               include Legion::Extensions::Helpers::Lex if Legion::Extensions.const_defined?(:Helpers, false) &&
                                                           Legion::Extensions::Helpers.const_defined?(:Lex, false)
 
-              def get_trust(agent_id:, domain: :general, **)
-                entry = trust_map.get(agent_id, domain: domain)
+              def get_trust(agent_id:, domain: :general, partner_identity: nil, **)
+                entry = trust_map.get(agent_id, domain: domain, partner_identity: partner_identity)
                 if entry
                   log.debug "[trust] get agent=#{agent_id} domain=#{domain} composite=#{entry[:composite].round(2)}"
                   { found: true, trust: entry }
@@ -21,8 +21,8 @@ module Legion
                 end
               end
 
-              def record_trust_interaction(agent_id:, positive:, domain: :general, **)
-                entry = trust_map.record_interaction(agent_id, domain: domain, positive: positive)
+              def record_trust_interaction(agent_id:, positive:, domain: :general, partner_identity: nil, **)
+                entry = trust_map.record_interaction(agent_id, domain: domain, positive: positive, partner_identity: partner_identity)
                 msg = "[trust] interaction: agent=#{agent_id} domain=#{domain} positive=#{positive} " \
                       "composite=#{entry[:composite].round(2)} total=#{entry[:interaction_count]}"
                 log.info msg
@@ -35,10 +35,10 @@ module Legion
                 }
               end
 
-              def reinforce_trust_dimension(agent_id:, dimension:, domain: :general, amount: nil, **)
+              def reinforce_trust_dimension(agent_id:, dimension:, domain: :general, amount: nil, partner_identity: nil, **)
                 amt = amount || Helpers::TrustModel::TRUST_REINFORCEMENT
-                trust_map.reinforce_dimension(agent_id, domain: domain, dimension: dimension, amount: amt)
-                entry = trust_map.get(agent_id, domain: domain)
+                trust_map.reinforce_dimension(agent_id, domain: domain, dimension: dimension, amount: amt, partner_identity: partner_identity)
+                entry = trust_map.get(agent_id, domain: domain, partner_identity: partner_identity)
                 log.debug "[trust] reinforce: agent=#{agent_id} dimension=#{dimension} amount=#{amt} composite=#{entry[:composite].round(2)}"
                 { agent_id: agent_id, domain: domain, dimension: dimension, composite: entry[:composite] }
               end
@@ -49,15 +49,15 @@ module Legion
                 { decayed: decayed }
               end
 
-              def trusted_agents(domain: :general, min_trust: nil, **)
+              def trusted_agents(domain: :general, min_trust: nil, partner_identity: nil, **)
                 min = min_trust || Helpers::TrustModel::TRUST_CONSIDER_THRESHOLD
-                agents = trust_map.trusted_agents(domain: domain, min_trust: min)
+                agents = trust_map.trusted_agents(domain: domain, min_trust: min, partner_identity: partner_identity)
                 log.debug "[trust] trusted agents: domain=#{domain} min=#{min} count=#{agents.size}"
                 { agents: agents, count: agents.size }
               end
 
-              def delegatable_agents(domain: :general, **)
-                agents = trust_map.delegatable_agents(domain: domain)
+              def delegatable_agents(domain: :general, partner_identity: nil, **)
+                agents = trust_map.delegatable_agents(domain: domain, partner_identity: partner_identity)
                 log.debug "[trust] delegatable agents: domain=#{domain} count=#{agents.size}"
                 { agents: agents, count: agents.size }
               end
