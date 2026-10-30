@@ -36,6 +36,60 @@ RSpec.describe Legion::Extensions::Agentic::Social::Calibration::Runners::Calibr
       result = client.update_calibration(observation: { content: 'thanks', direct_address: true, content_length: 20 })
       expect(result[:applied]).to eq(applied_data)
     end
+
+    it 'keeps two humans baselines, pending exchanges and weights independent' do
+      client.update_calibration(observation: { identity: 'alice', latency: 10 })
+      client.update_calibration(observation: { identity: 'bob', latency: 1 })
+      client.record_advisory_meta(advisory_id: 'alice-reply', advisory_types: [:tone_adjustment],
+                                  applied: { identity: 'alice', exchange_id: 'a' })
+      client.record_advisory_meta(advisory_id: 'bob-reply', advisory_types: [:verbosity_adjustment],
+                                  applied: { identity: 'bob', exchange_id: 'b' })
+
+      wrong_human = client.update_calibration(observation: { identity: 'bob', exchange_id: 'a', content: 'wrong' })
+      expect(wrong_human[:skipped]).to eq(:no_advisory)
+      bob = client.update_calibration(observation: { identity: 'bob', exchange_id: 'b', content: 'wrong' })
+      alice = client.update_calibration(observation: { identity: 'alice', exchange_id: 'a', latency: 7.9 })
+
+      expect(bob[:weights]['verbosity_adjustment']).to be < 0.5
+      expect(bob[:weights]['tone_adjustment']).to eq(0.5)
+      expect(alice[:reaction_score]).to eq(0.6)
+      expect(alice[:weights]['tone_adjustment']).to be > 0.5
+      expect(alice[:weights]['verbosity_adjustment']).to eq(0.5)
+      expect(client.calibration_weights[:weights].values).to all(eq(0.5))
+    end
+
+    it 'does not consume scoped feedback using missing or contradictory identity' do
+      client.record_advisory_meta(advisory_id: 'alice', advisory_types: [:tone_adjustment],
+                                  applied: { identity: 'alice', exchange_id: 'a' })
+      expect(client.update_calibration(observation: { exchange_id: 'a', content: 'wrong' })[:skipped]).to eq(:no_advisory)
+      result = client.update_calibration(identity: 'alice', observation: { identity: 'bob', exchange_id: 'a', content: 'wrong' })
+      expect(result[:skipped]).to eq(:identity_mismatch)
+      expect(client.calibration_weights(identity: 'alice')[:weights]['tone_adjustment']).to eq(0.5)
+      result = client.update_calibration(observation: { identity: 'alice', exchange_id: 'a', content: 'thanks' })
+      expect(result[:weights]['tone_adjustment']).to be > 0.5
+    end
+
+    it 'uses an injected registry as the state owner across client instances' do
+      registry = Legion::Extensions::Agentic::Social::Calibration::Helpers::CalibrationRegistry.new
+      writer = Legion::Extensions::Agentic::Social::Calibration::Client.new(calibration_registry: registry)
+      reader = Legion::Extensions::Agentic::Social::Calibration::Client.new(calibration_registry: registry)
+      writer.record_advisory_meta(advisory_id: 'shared', identity: 'alice', advisory_types: [:tone_adjustment])
+      reader.update_calibration(observation: { identity: 'alice', content: 'wrong' })
+
+      expect(writer.calibration_weights(identity: 'alice')[:weights]['tone_adjustment']).to be < 0.5
+      expect(reader.calibration_stats(identity: 'alice')[:history_counts]['tone_adjustment']).to eq(1)
+      expect(client.calibration_weights(identity: 'alice')[:weights]['tone_adjustment']).to eq(0.5)
+    end
+
+    it 'keeps a bare runner on the same scoped contract as clients' do
+      runner = Object.new.extend(described_class)
+      runner.record_advisory_meta(advisory_id: 'bare', identity: 'alice', advisory_types: [:tone_adjustment])
+      runner.update_calibration(observation: { identity: 'bob', content: 'wrong' })
+      runner.update_calibration(observation: { identity: 'alice', content: 'thanks' })
+
+      expect(runner.calibration_weights(identity: 'alice')[:weights]['tone_adjustment']).to be > 0.5
+      expect(runner.calibration_weights(identity: 'bob')[:weights]['tone_adjustment']).to eq(0.5)
+    end
   end
 
   describe '#record_advisory_meta' do

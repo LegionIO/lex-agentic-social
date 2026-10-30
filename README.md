@@ -5,7 +5,7 @@ Domain consolidation gem for social cognition, governance, and multi-agent inter
 ## Overview
 
 **Gem**: `lex-agentic-social`
-**Version**: 0.1.14
+**Version**: 0.2.0
 **Namespace**: `Legion::Extensions::Agentic::Social`
 
 ## Sub-Modules
@@ -47,6 +47,27 @@ Domain consolidation gem for social cognition, governance, and multi-agent inter
 ## Safety Notes
 
 `Social::Consent` governs whether actions require human approval — the HITL gate must not be bypassed. `Social::Governance` provides the council approval mechanism used by `Defense::Extinction` for containment escalation.
+
+## Scoped calibration and trust
+
+Pass a verified `identity:` when recording an advisory, or include it in the
+existing `applied:` hash. Carry the same identity and available `exchange_id`
+or `conversation_id` into the feedback observation. Multiple pending
+advisories are matched by this attribution; ambiguous, mismatched, expired,
+or repeated feedback cannot reinforce another response.
+
+`Calibration::Client.new(calibration_registry: registry)` shares an explicitly
+owned registry across clients. Without injection, clients remain independent.
+Legacy unscoped receipts only accept unscoped feedback. GAIA must supply the
+matching receipt attribution before identified feedback can be graded.
+Receipt deduplication is process-local within the existing one-hour lifetime,
+not durable exactly-once processing.
+
+Trust runner methods accept `partner_identity:` independently of the worker's
+`agent_id:`. Scoped trust is preserved through Apollo serialization and is
+separate from legacy unscoped trust. Do not roll persisted scoped trust back
+to readers that discard partner identity: they can merge separate people.
+Calibration and trust do not grant consent or tool authority.
 
 ## Installation
 

@@ -28,7 +28,9 @@ module Legion
               end
 
               def get_or_create(agent_id, domain: :general, partner_identity: nil)
-                @entries[key(agent_id, domain, partner_identity)] ||= TrustModel.new_trust_entry(agent_id: agent_id, domain: domain)
+                @entries[key(agent_id, domain, partner_identity)] ||= TrustModel.new_trust_entry(agent_id: agent_id, domain: domain).tap do |entry|
+                  entry[:partner_identity] = partner_identity.to_s if partner_identity
+                end
               end
 
               def record_interaction(agent_id, positive:, domain: :general, partner_identity: nil)
@@ -61,8 +63,8 @@ module Legion
                 removed.size
               end
 
-              def reinforce_dimension(agent_id, dimension:, domain: :general, amount: TrustModel::TRUST_REINFORCEMENT)
-                entry = get_or_create(agent_id, domain: domain)
+              def reinforce_dimension(agent_id, dimension:, domain: :general, amount: TrustModel::TRUST_REINFORCEMENT, partner_identity: nil)
+                entry = get_or_create(agent_id, domain: domain, partner_identity: partner_identity)
                 return unless TrustModel::TRUST_DIMENSIONS.include?(dimension)
 
                 entry[:dimensions][dimension] = TrustModel.clamp(entry[:dimensions][dimension] + amount)
@@ -84,14 +86,16 @@ module Legion
                 decayed
               end
 
-              def trusted_agents(domain: :general, min_trust: TrustModel::TRUST_CONSIDER_THRESHOLD)
-                @entries.values
-                        .select { |e| e[:domain] == domain && e[:composite] >= min_trust }
-                        .sort_by { |e| -e[:composite] }
+              def trusted_agents(domain: :general, min_trust: TrustModel::TRUST_CONSIDER_THRESHOLD, partner_identity: nil)
+                identity = partner_identity&.to_s
+                selected = @entries.values.select do |entry|
+                  entry[:domain] == domain && entry[:composite] >= min_trust && entry[:partner_identity] == identity
+                end
+                selected.sort_by! { |entry| -entry[:composite] }
               end
 
-              def delegatable_agents(domain: :general)
-                trusted_agents(domain: domain, min_trust: TrustModel::TRUST_DELEGATE_THRESHOLD)
+              def delegatable_agents(domain: :general, partner_identity: nil)
+                trusted_agents(domain: domain, min_trust: TrustModel::TRUST_DELEGATE_THRESHOLD, partner_identity: partner_identity)
               end
 
               def count
@@ -101,8 +105,10 @@ module Legion
               def to_apollo_entries
                 @entries.map do |_key, entry|
                   tags = build_apollo_tags(entry[:agent_id], entry[:domain])
+                  tags << "partner:#{entry[:partner_identity]}" if entry[:partner_identity]
                   content = Legion::JSON.dump({
                                                 agent_id:          entry[:agent_id].to_s,
+                                                partner_identity:  entry[:partner_identity],
                                                 domain:            entry[:domain].to_s,
                                                 dimensions:        entry[:dimensions],
                                                 composite:         entry[:composite],
@@ -155,8 +161,10 @@ module Legion
                 domain_val = (flex(data, 'domain') || 'general').to_sym
                 dims = restore_dimensions(flex(data, 'dimensions') || {})
 
-                @entries[key(agent_id, domain_val)] = {
+                partner_identity = flex(data, 'partner_identity')
+                @entries[key(agent_id, domain_val, partner_identity)] = {
                   agent_id:          agent_id,
+                  partner_identity:  partner_identity&.to_s,
                   domain:            domain_val,
                   dimensions:        dims,
                   composite:         (flex(data, 'composite') || TrustModel::NEUTRAL_TRUST).to_f,

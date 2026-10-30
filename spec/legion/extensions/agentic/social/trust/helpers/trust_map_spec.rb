@@ -324,6 +324,23 @@ RSpec.describe Legion::Extensions::Agentic::Social::Trust::Helpers::TrustMap do
       map.get_or_create(agent_id, partner_identity: partner_y)
       expect(map.count).to eq(2)
     end
+
+    it 'preserves scoped trust across serialization without overwriting legacy or another partner' do
+      map.record_interaction(agent_id, positive: true, partner_identity: partner_x)
+      map.record_interaction(agent_id, positive: false, partner_identity: partner_y)
+      map.record_interaction(agent_id, positive: true)
+      restored = described_class.new
+      persisted = double('apollo', query: { success: true, results: map.to_apollo_entries })
+      expect(restored.from_apollo(store: persisted)).to be true
+
+      expect(restored.get(agent_id, partner_identity: partner_x)[:positive_count]).to eq(1)
+      expect(restored.get(agent_id, partner_identity: partner_y)[:negative_count]).to eq(1)
+      expect(restored.get(agent_id)[:positive_count]).to eq(1)
+      restored.erase_partner!(identity: partner_x)
+      expect(restored.get(agent_id, partner_identity: partner_x)).to be_nil
+      expect(restored.get(agent_id, partner_identity: partner_y)[:negative_count]).to eq(1)
+      expect(restored.get(agent_id)[:positive_count]).to eq(1)
+    end
   end
 
   describe '#erase_partner!(identity:)' do

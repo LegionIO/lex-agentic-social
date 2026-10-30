@@ -31,6 +31,11 @@ module Legion
                 ensure_domain(domain)
                 entry = @domains[domain]
                 old_tier = entry[:tier]
+                if old_tier != tier
+                  entry[:pending_tier] = nil
+                  entry[:pending_since] = nil
+                  entry[:pending_requested_by] = nil
+                end
                 entry[:tier] = tier
                 entry[:last_changed_at] = Time.now.utc
                 entry[:history] << { from: old_tier, to: tier, at: Time.now.utc }

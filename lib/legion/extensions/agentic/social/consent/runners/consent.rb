@@ -119,6 +119,11 @@ module Legion
                 map = consent_map
                 return { approved: false, error: 'no_pending_approval' } unless map.pending?(domain)
 
+                if map.pending_expired?(domain)
+                  map.clear_pending(domain)
+                  return { approved: false, error: 'approval_expired' }
+                end
+
                 pending_tier = map.domains[domain][:pending_tier]
                 old_tier = map.get_tier(domain)
                 map.clear_pending(domain)

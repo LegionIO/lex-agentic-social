@@ -8,13 +8,10 @@ module Legion
           class Client
             include Runners::Calibration
 
-            def initialize(**)
-              @calibration_store = Helpers::CalibrationStore.new
+            def initialize(calibration_store: nil, calibration_registry: nil, **)
+              @calibration_store = calibration_store || Legion::Extensions::Agentic::Social::Calibration::Helpers::CalibrationStore.new
+              @calibration_registry = calibration_registry || Legion::Extensions::Agentic::Social::Calibration::Helpers::CalibrationRegistry.new
             end
-
-            private
-
-            attr_reader :calibration_store
           end
         end
       end
